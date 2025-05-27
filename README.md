@@ -1,5 +1,10 @@
 # Cursor Bridge
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![GitHub repo](https://img.shields.io/badge/GitHub-cursor--bridge-blue.svg)](https://github.com/maricoxu/cursor-bridge)
+
 🚀 **无缝远程开发桥梁** - 为Cursor IDE提供企业级远程终端访问解决方案
 
 ## 项目简介
@@ -21,7 +26,7 @@ Cursor Bridge 是一个基于Model Context Protocol (MCP)的远程终端代理�
 
 ```bash
 # 克隆项目
-git clone https://github.com/your-org/cursor-bridge.git
+git clone https://github.com/maricoxu/cursor-bridge.git
 cd cursor-bridge
 
 # 安装依赖
@@ -591,9 +596,9 @@ python -m cursor_bridge.server --verbose
 
 ## 联系我们
 
-- 项目主页: https://github.com/your-org/cursor-bridge
-- 问题反馈: https://github.com/your-org/cursor-bridge/issues
-- 邮箱: cursor-bridge@your-org.com
+- 项目主页: https://github.com/maricoxu/cursor-bridge
+- 问题反馈: https://github.com/maricoxu/cursor-bridge/issues
+- 邮箱: maricoxu@gmail.com
 
 ---
 

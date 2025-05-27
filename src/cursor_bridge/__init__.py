@@ -5,8 +5,8 @@ Cursor Bridge - 无缝远程开发桥梁
 """
 
 __version__ = "0.1.0"
-__author__ = "Your Name"
-__email__ = "your.email@example.com"
+__author__ = "maricoxu"
+__email__ = "maricoxu@gmail.com"
 __license__ = "MIT"
 
 from .server import CursorBridgeServer

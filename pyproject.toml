@@ -2,11 +2,11 @@
 name = "cursor-bridge"
 version = "0.1.0"
 description = "无缝远程开发桥梁 - 为Cursor IDE提供企业级远程终端访问解决方案"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["maricoxu <maricoxu@gmail.com>"]
 readme = "README.md"
 license = "MIT"
-homepage = "https://github.com/your-org/cursor-bridge"
-repository = "https://github.com/your-org/cursor-bridge"
+homepage = "https://github.com/maricoxu/cursor-bridge"
+repository = "https://github.com/maricoxu/cursor-bridge"
 documentation = "https://cursor-bridge.readthedocs.io"
 keywords = ["cursor", "bridge", "remote", "terminal", "ssh", "development", "mcp"]
 classifiers = [
