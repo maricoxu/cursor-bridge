@@ -1,0 +1,60 @@
+# Cursor Bridge 配置文件
+
+# 服务器配置
+servers:
+  # 企业代理连接示例
+  enterprise-dev:
+    type: proxy
+    proxy:
+      command: "enterprise-vpn-tool"
+      target_host: "internal-server.company.com"
+      target_port: 22
+      username: "developer"
+      timeout: 30
+      extra_args: []
+    session:
+      name: "enterprise-dev-session"
+      working_directory: "/home/developer"
+      environment:
+        TERM: "xterm-256color"
+        LANG: "en_US.UTF-8"
+      shell: "/bin/bash"
+
+  # 直连SSH示例
+  direct-server:
+    type: direct
+    ssh:
+      host: "192.168.1.100"
+      port: 22
+      username: "user"
+      key_file: "~/.ssh/id_rsa"
+      timeout: 10
+    session:
+      name: "direct-session"
+      working_directory: "/home/user"
+      environment: {}
+      shell: "/bin/bash"
+
+# 安全配置
+security:
+  allowed_commands:
+    - "ls"
+    - "pwd"
+    - "cd"
+    - "cat"
+    - "grep"
+    - "find"
+    - "git"
+    - "python"
+    - "node"
+    - "npm"
+    - "pip"
+  
+  blocked_commands:
+    - "rm -rf /"
+    - "sudo rm"
+    - "mkfs"
+  
+  command_timeout: 300
+  max_output_size: 10485760
+  max_concurrent_commands: 10

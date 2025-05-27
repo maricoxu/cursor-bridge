@@ -22,7 +22,25 @@ Cursor Bridge 是一个基于Model Context Protocol (MCP)的远程终端代理�
 
 ## 快速开始
 
-### 安装
+### 方式一：自动安装（推荐）
+
+```bash
+# 克隆项目
+git clone https://github.com/maricoxu/cursor-bridge.git
+cd cursor-bridge
+
+# 运行自动安装脚本
+./install.sh
+```
+
+安装脚本会自动：
+- 检查Python环境（需要Python 3.9+）
+- 安装所有依赖包
+- 生成默认配置文件
+- 运行基本测试
+- 创建启动脚本
+
+### 方式二：手动安装
 
 ```bash
 # 克隆项目
@@ -30,37 +48,71 @@ git clone https://github.com/maricoxu/cursor-bridge.git
 cd cursor-bridge
 
 # 安装依赖
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 
-# 或使用poetry
-poetry install
+# 生成配置文件
+export PYTHONPATH=$PWD/src:$PYTHONPATH
+python3 -m cursor_bridge.cli init-config
 ```
 
-### 配置
+### 配置服务器
+
+编辑生成的 `cursor_bridge_config.yaml` 文件：
 
 ```yaml
-# config/cursor_bridge_config.yaml
+# 服务器配置示例
 servers:
+  # 企业代理连接
   enterprise-dev:
     type: proxy
     proxy:
-      command: enterprise-vpn-tool
-      target_host: your-server.com
+      command: "enterprise-vpn-tool"  # 你的企业VPN工具命令
+      target_host: "internal-server.company.com"
       target_port: 22
-      username: your-username
+      username: "your-username"
     session:
-      name: enterprise-dev-session
-      working_directory: /home/Code
+      name: "enterprise-dev-session"
+      working_directory: "/home/Code"
+      
+  # 直接SSH连接
+  direct-server:
+    type: direct
+    ssh:
+      host: "192.168.1.100"
+      port: 22
+      username: "user"
+      key_file: "~/.ssh/id_rsa"
+    session:
+      name: "direct-session"
+      working_directory: "/home/user"
 ```
 
 ### 启动服务
 
 ```bash
-# 启动MCP服务器
-python -m cursor_bridge.server --config config/cursor_bridge_config.yaml
+# 使用生成的启动脚本（推荐）
+./start_cursor_bridge.sh
+
+# 或手动启动
+export PYTHONPATH=$PWD/src:$PYTHONPATH
+python3 -m cursor_bridge.cli start --config cursor_bridge_config.yaml
 
 # 或使用Docker
 docker run -d -p 8082:8082 -v $(pwd)/config:/app/config cursor-bridge
+```
+
+### 验证安装
+
+```bash
+# 检查版本
+export PYTHONPATH=$PWD/src:$PYTHONPATH
+python3 -m cursor_bridge.cli version
+
+# 测试连通性
+python3 -m cursor_bridge.cli ping
+
+# 检查健康状态
+python3 -m cursor_bridge.cli health
 ```
 
 ### Cursor集成
@@ -99,7 +151,24 @@ docker run -d -p 8082:8082 -v $(pwd)/config:/app/config cursor-bridge
 
 ## 使用示例
 
-### 基本命令执行
+### CLI命令
+
+```bash
+# 查看所有可用命令
+export PYTHONPATH=$PWD/src:$PYTHONPATH
+python3 -m cursor_bridge.cli --help
+
+# 启动服务器
+python3 -m cursor_bridge.cli start
+
+# 查看配置
+python3 -m cursor_bridge.cli config
+
+# 生成新配置文件
+python3 -m cursor_bridge.cli init-config --output my_config.yaml
+```
+
+### MCP工具使用（开发中）
 
 ```python
 # Cursor Agent 可以直接执行远程命令
@@ -108,7 +177,7 @@ await execute_command("git status")
 await execute_command("npm run build")
 ```
 
-### 多服务器支持
+### 多服务器支持（开发中）
 
 ```python
 # 在不同服务器上执行命令
@@ -116,7 +185,7 @@ await execute_command("ls", server="enterprise-dev")
 await execute_command("ps aux", server="staging-server")
 ```
 
-### 会话管理
+### 会话管理（开发中）
 
 ```python
 # 创建新会话
@@ -557,14 +626,26 @@ python -m cursor_bridge.server --verbose
 - 实际行为
 - 环境信息
 
-## 路线图
+## 开发状态
 
-### v1.0 (当前开发中)
+### ✅ 已完成 (v0.1.0)
 - [x] 基础MCP服务器框架
-- [x] 企业VPN工具连接支持
-- [x] tmux会话管理
+- [x] 配置管理系统
+- [x] 日志系统
+- [x] CLI工具
+- [x] 健康检查和监控
+- [x] 自动安装脚本
+
+### 🔄 开发中 (v0.2.0)
+- [ ] 连接策略实现
+- [ ] SSH连接管理
+- [ ] 企业VPN工具集成
+- [ ] tmux会话管理
 - [ ] 基本命令执行
-- [ ] Cursor集成
+
+### 📋 计划中 (v1.0)
+- [ ] 完整MCP工具实现
+- [ ] Cursor IDE集成
 
 ### v1.1
 - [ ] 多服务器支持
