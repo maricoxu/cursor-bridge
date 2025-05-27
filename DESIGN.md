@@ -2,7 +2,7 @@
 
 ## 项目概述
 
-**Terminal Agent MCP** 是一个基于Model Context Protocol (MCP)的远程终端代理系统，旨在为Cursor IDE提供无缝的远程服务器终端访问能力。该项目解决了企业内网开发中需要通过跳板机(relay-cli)访问远程服务器的复杂性问题。
+**Terminal Agent MCP** 是一个基于Model Context Protocol (MCP)的远程终端代理系统，旨在为Cursor IDE提供无缝的远程服务器终端访问能力。该项目解决了企业内网开发中需要通过跳板机或企业VPN工具访问远程服务器的复杂性问题。
 
 ### 核心价值
 - 🚀 **无缝体验**：Cursor Agent可以直接在远程服务器上执行命令
@@ -29,8 +29,8 @@
                                 │
                                 ▼
                        ┌──────────────────┐
-                       │   Relay/Proxy    │
-                       │   (relay-cli)    │
+                       │   Proxy/VPN      │
+                       │ (enterprise-vpn) │
                        └──────────────────┘
 ```
 
@@ -75,7 +75,7 @@
 **方案1（智能连接管理）** 作为基础设施层：
 - 负责建立和维护到远程服务器的基础连接
 - 提供端口转发和网络通道
-- 处理relay-cli的复杂性
+- 处理企业VPN工具的复杂性
 
 **方案2（Agent远程执行）** 作为应用层：
 - 基于方案1建立的连接通道
@@ -93,7 +93,7 @@
 │  (Connection, Tunneling, Session)      │
 ├─────────────────────────────────────────┤
 │            Network Layer               │
-│  (relay-cli, SSH, Port Forwarding)    │
+│  (enterprise-vpn, SSH, Port Forwarding) │
 └─────────────────────────────────────────┘
 ```
 
@@ -151,8 +151,8 @@ class ServerConfig:
     host: str
     port: int
     username: str
-    connection_type: str  # "direct", "relay", "proxy"
-    relay_config: Optional[RelayConfig] = None
+    connection_type: str  # "direct", "proxy", "vpn"
+    proxy_config: Optional[ProxyConfig] = None
 ```
 
 ### 2. Connection Manager 设计
@@ -169,14 +169,14 @@ class ConnectionStrategy(ABC):
     @abstractmethod
     async def reconnect(self, connection: Connection) -> bool
 
-class RelayConnectionStrategy(ConnectionStrategy):
-    """基于relay-cli的连接策略"""
+class ProxyConnectionStrategy(ConnectionStrategy):
+    """基于企业VPN工具的连接策略"""
     
 class DirectConnectionStrategy(ConnectionStrategy):
     """直接SSH连接策略"""
     
-class ProxyConnectionStrategy(ConnectionStrategy):
-    """代理连接策略"""
+class VPNConnectionStrategy(ConnectionStrategy):
+    """VPN连接策略"""
 ```
 
 #### 连接池管理
@@ -272,15 +272,15 @@ class CommandExecutor:
 ```yaml
 # terminal_agent_config.yaml
 servers:
-  baidu-dev:
-    type: relay
-    relay:
-      command: relay-cli
-      target_host: bjhw-sys-rpm0221.bjhw.baidu.com
+  enterprise-dev:
+    type: proxy
+    proxy:
+      command: enterprise-vpn-tool
+      target_host: internal-server.company.com
       target_port: 22
       username: your-username
     session:
-      name: baidu-dev-session
+      name: enterprise-dev-session
       working_directory: /home/Code
       environment:
         TERM: xterm-256color
@@ -500,7 +500,7 @@ security:
 ## 成功指标
 
 ### 1. 功能指标
-- [ ] 支持relay-cli连接方式
+- [ ] 支持企业VPN工具连接方式
 - [ ] 命令执行成功率 > 99%
 - [ ] 连接建立时间 < 5秒
 - [ ] 命令响应时间 < 1秒
@@ -539,7 +539,7 @@ security:
 Terminal Agent MCP项目通过分层架构设计，将复杂的企业内网访问问题分解为可管理的组件。基于方案1的连接管理基础设施，构建方案2的MCP服务层，为Cursor IDE提供无缝的远程终端访问能力。
 
 项目的核心价值在于：
-1. **简化复杂性**：将relay-cli的复杂性封装在底层
+1. **简化复杂性**：将企业VPN工具的复杂性封装在底层
 2. **提升体验**：为开发者提供原生终端体验
 3. **保证可靠性**：通过连接池和重连机制确保稳定性
 4. **确保安全性**：通过多层安全机制保护系统安全

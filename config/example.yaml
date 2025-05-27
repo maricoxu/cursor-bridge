@@ -3,19 +3,19 @@
 
 # 服务器配置
 servers:
-  # 通过relay-cli连接的百度内网服务器
-  baidu-dev:
-    type: relay
-    relay:
-      command: relay-cli
-      target_host: bjhw-sys-rpm0221.bjhw.baidu.com
+  # 通过企业VPN工具连接的内网服务器
+  enterprise-dev:
+    type: proxy
+    proxy:
+      command: enterprise-vpn-tool
+      target_host: internal-server.company.com
       target_port: 22
       username: your-username
       timeout: 30
-      # 可选：relay-cli的额外参数
+      # 可选：VPN工具的额外参数
       extra_args: []
     session:
-      name: baidu-dev-session
+      name: enterprise-dev-session
       working_directory: /home/Code
       environment:
         TERM: xterm-256color
@@ -24,7 +24,7 @@ servers:
       shell: /bin/bash
       # tmux会话配置
       tmux:
-        session_name: "baidu-dev"
+        session_name: "enterprise-dev"
         window_name: "main"
         create_if_not_exists: true
         

@@ -8,9 +8,9 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 
-class RelayConfig(BaseModel):
-    """Relay连接配置"""
-    command: str = "relay-cli"
+class ProxyConfig(BaseModel):
+    """企业代理连接配置"""
+    command: str = "enterprise-vpn-tool"
     target_host: str
     target_port: int = 22
     username: str
@@ -38,8 +38,8 @@ class SessionConfig(BaseModel):
 
 class ServerConfig(BaseModel):
     """服务器配置"""
-    type: str  # relay, direct, proxy
-    relay: Optional[RelayConfig] = None
+    type: str  # proxy, direct, vpn
+    proxy: Optional[ProxyConfig] = None
     ssh: Optional[SSHConfig] = None
     session: SessionConfig
 

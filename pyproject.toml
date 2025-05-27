@@ -142,7 +142,7 @@ markers = [
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
     "ssh: marks tests that require SSH connection",
-    "relay: marks tests that require relay-cli",
+    "proxy: marks tests that require enterprise VPN tools",
 ]
 asyncio_mode = "auto"
 

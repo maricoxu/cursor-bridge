@@ -9,7 +9,7 @@
 
 ## 项目简介
 
-Cursor Bridge 是一个基于Model Context Protocol (MCP)的远程终端代理系统，专门解决企业内网开发中通过跳板机访问远程服务器的复杂性问题。让Cursor的AI Agent能够直接在远程服务器上执行命令，就像在本地一样自然。
+Cursor Bridge 是一个基于Model Context Protocol (MCP)的远程终端代理系统，专门解决企业内网开发中通过企业VPN工具或跳板机访问远程服务器的复杂性问题。让Cursor的AI Agent能够直接在远程服务器上执行命令，就像在本地一样自然。
 
 ### ✨ 核心特性
 
@@ -41,15 +41,15 @@ poetry install
 ```yaml
 # config/cursor_bridge_config.yaml
 servers:
-  baidu-dev:
-    type: relay
-    relay:
-      command: relay-cli
+  enterprise-dev:
+    type: proxy
+    proxy:
+      command: enterprise-vpn-tool
       target_host: your-server.com
       target_port: 22
       username: your-username
     session:
-      name: baidu-dev-session
+      name: enterprise-dev-session
       working_directory: /home/Code
 ```
 
@@ -112,7 +112,7 @@ await execute_command("npm run build")
 
 ```python
 # 在不同服务器上执行命令
-await execute_command("ls", server="baidu-dev")
+await execute_command("ls", server="enterprise-dev")
 await execute_command("ps aux", server="staging-server")
 ```
 
@@ -225,17 +225,17 @@ async def custom_command(param: str) -> str:
 ```yaml
 # 服务器配置
 servers:
-  # 通过relay-cli连接的服务器
-  baidu-dev:
-    type: relay
-    relay:
-      command: relay-cli
-      target_host: bjhw-sys-rpm0221.bjhw.baidu.com
+  # 通过企业VPN工具连接的服务器
+  enterprise-dev:
+    type: proxy
+    proxy:
+      command: enterprise-vpn-tool
+      target_host: internal-server.company.com
       target_port: 22
       username: your-username
       timeout: 30
     session:
-      name: baidu-dev-session
+      name: enterprise-dev-session
       working_directory: /home/Code
       environment:
         TERM: xterm-256color
@@ -499,8 +499,8 @@ ping target-server.com
 # 检查SSH连接
 ssh -v user@target-server.com
 
-# 检查relay-cli
-relay-cli --test
+# 检查企业VPN工具
+enterprise-vpn-tool --test
 ```
 
 #### 2. 命令执行超时
@@ -561,7 +561,7 @@ python -m cursor_bridge.server --verbose
 
 ### v1.0 (当前开发中)
 - [x] 基础MCP服务器框架
-- [x] relay-cli连接支持
+- [x] 企业VPN工具连接支持
 - [x] tmux会话管理
 - [ ] 基本命令执行
 - [ ] Cursor集成

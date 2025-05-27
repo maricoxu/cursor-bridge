@@ -8,9 +8,9 @@ from cursor_bridge.config.loader import ConfigLoader
 def test_server_config_creation():
     """测试服务器配置创建"""
     config_data = {
-        "type": "relay",
-        "relay": {
-            "command": "relay-cli",
+        "type": "proxy",
+        "proxy": {
+            "command": "enterprise-vpn-tool",
             "target_host": "test.com",
             "target_port": 22,
             "username": "test"
@@ -22,8 +22,8 @@ def test_server_config_creation():
     }
     
     config = ServerConfig(**config_data)
-    assert config.type == "relay"
-    assert config.relay.target_host == "test.com"
+    assert config.type == "proxy"
+    assert config.proxy.target_host == "test.com"
     assert config.session.name == "test-session"
 
 
@@ -32,9 +32,9 @@ def test_cursor_bridge_config_creation():
     config_data = {
         "servers": {
             "test-server": {
-                "type": "relay",
-                "relay": {
-                    "command": "relay-cli",
+                "type": "proxy",
+                "proxy": {
+                    "command": "enterprise-vpn-tool",
                     "target_host": "test.com",
                     "target_port": 22,
                     "username": "test"
@@ -49,4 +49,4 @@ def test_cursor_bridge_config_creation():
     
     config = CursorBridgeConfig(**config_data)
     assert "test-server" in config.servers
-    assert config.servers["test-server"].type == "relay"
+    assert config.servers["test-server"].type == "proxy"
