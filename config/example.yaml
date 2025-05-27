@@ -1,0 +1,308 @@
+# Terminal Agent MCP 配置示例
+# 复制此文件为 terminal_agent_config.yaml 并根据需要修改
+
+# 服务器配置
+servers:
+  # 通过relay-cli连接的百度内网服务器
+  baidu-dev:
+    type: relay
+    relay:
+      command: relay-cli
+      target_host: bjhw-sys-rpm0221.bjhw.baidu.com
+      target_port: 22
+      username: your-username
+      timeout: 30
+      # 可选：relay-cli的额外参数
+      extra_args: []
+    session:
+      name: baidu-dev-session
+      working_directory: /home/Code
+      environment:
+        TERM: xterm-256color
+        LANG: en_US.UTF-8
+        PATH: /usr/local/bin:/usr/bin:/bin
+      shell: /bin/bash
+      # tmux会话配置
+      tmux:
+        session_name: "baidu-dev"
+        window_name: "main"
+        create_if_not_exists: true
+        
+  # 直接SSH连接的服务器示例
+  direct-server:
+    type: direct
+    ssh:
+      host: your-server.com
+      port: 22
+      username: your-username
+      # 使用SSH密钥认证
+      key_file: ~/.ssh/id_rsa
+      # 或使用密码认证（不推荐）
+      # password: your-password
+      timeout: 10
+      # SSH连接选项
+      options:
+        StrictHostKeyChecking: "no"
+        UserKnownHostsFile: "/dev/null"
+        ServerAliveInterval: 60
+        ServerAliveCountMax: 3
+    session:
+      name: direct-session
+      working_directory: /home/your-username
+      environment:
+        TERM: xterm-256color
+      shell: /bin/bash
+      
+  # 通过代理连接的服务器示例
+  proxy-server:
+    type: proxy
+    proxy:
+      host: proxy.company.com
+      port: 8080
+      username: proxy-user
+      password: proxy-password
+      # 代理类型: http, socks4, socks5
+      proxy_type: http
+    target:
+      host: internal-server.com
+      port: 22
+      username: target-user
+      key_file: ~/.ssh/id_rsa
+    session:
+      name: proxy-session
+      working_directory: /home/target-user
+
+# MCP服务器配置
+mcp:
+  server:
+    host: localhost
+    port: 8082
+    # 日志级别: DEBUG, INFO, WARNING, ERROR
+    log_level: INFO
+    # 最大并发连接数
+    max_connections: 100
+    # 请求超时时间（秒）
+    request_timeout: 30
+    
+  features:
+    # 是否启用命令历史记录
+    command_history: true
+    # 是否启用会话持久化
+    session_persistence: true
+    # 是否启用自动重连
+    auto_reconnect: true
+    # 健康检查间隔（秒）
+    health_check_interval: 30
+    # 默认命令超时时间（秒）
+    command_timeout: 300
+    # 是否启用交互式命令支持
+    interactive_commands: true
+    
+  # 可用的MCP工具
+  tools:
+    - execute_command
+    - get_session_status
+    - create_session
+    - destroy_session
+    - list_sessions
+    - get_command_history
+    - health_check
+    
+  # 可用的MCP资源
+  resources:
+    - session_logs
+    - command_history
+    - server_status
+    - connection_status
+
+# 安全配置
+security:
+  # 命令白名单（如果为空则允许所有命令）
+  allowed_commands:
+    - "ls"
+    - "cd"
+    - "pwd"
+    - "cat"
+    - "grep"
+    - "find"
+    - "git"
+    - "npm"
+    - "yarn"
+    - "python"
+    - "python3"
+    - "pip"
+    - "pip3"
+    - "make"
+    - "cmake"
+    - "docker"
+    - "kubectl"
+    - "helm"
+    - "curl"
+    - "wget"
+    - "vim"
+    - "nano"
+    - "less"
+    - "more"
+    - "tail"
+    - "head"
+    - "ps"
+    - "top"
+    - "htop"
+    - "df"
+    - "du"
+    - "free"
+    - "uname"
+    - "whoami"
+    - "id"
+    - "date"
+    - "uptime"
+    
+  # 命令黑名单
+  blocked_commands:
+    - "rm -rf /"
+    - "sudo rm"
+    - "mkfs"
+    - "dd if="
+    - ":(){ :|:& };:"  # fork bomb
+    - "chmod 777"
+    - "chown root"
+    - "su -"
+    - "sudo su"
+    
+  # 命令模式过滤（正则表达式）
+  blocked_patterns:
+    - "rm.*-rf.*/"
+    - "sudo.*rm.*-rf"
+    - "chmod.*777"
+    - "dd.*if=.*of="
+    - "mkfs\."
+    - "fdisk.*"
+    
+  # 执行限制
+  command_timeout: 300  # 5分钟
+  max_output_size: 10485760  # 10MB
+  max_concurrent_commands: 10
+  
+  # 文件访问限制
+  allowed_paths:
+    - "/home"
+    - "/tmp"
+    - "/var/log"
+    - "/opt"
+    - "/usr/local"
+    
+  blocked_paths:
+    - "/etc/passwd"
+    - "/etc/shadow"
+    - "/root"
+    - "/boot"
+    - "/sys"
+    - "/proc"
+    
+  # 环境变量限制
+  allowed_env_vars:
+    - "PATH"
+    - "HOME"
+    - "USER"
+    - "TERM"
+    - "LANG"
+    - "LC_*"
+    - "NODE_ENV"
+    - "PYTHON_PATH"
+    
+  blocked_env_vars:
+    - "LD_PRELOAD"
+    - "LD_LIBRARY_PATH"
+
+# 监控配置
+monitoring:
+  # Prometheus指标
+  metrics:
+    enabled: true
+    port: 9090
+    path: /metrics
+    # 指标收集间隔（秒）
+    collection_interval: 15
+    
+  # 健康检查端点
+  health_check:
+    enabled: true
+    port: 8083
+    path: /health
+    # 健康检查超时（秒）
+    timeout: 5
+    
+  # 日志配置
+  logging:
+    level: INFO
+    format: json  # json 或 text
+    file: /var/log/terminal-agent-mcp.log
+    max_size: 100MB
+    backup_count: 5
+    # 是否输出到控制台
+    console: true
+    
+  # 告警配置
+  alerts:
+    # 连接失败阈值
+    connection_failure_threshold: 3
+    # 命令超时阈值
+    command_timeout_threshold: 5
+    # 错误率阈值
+    error_rate_threshold: 0.1
+    # 告警冷却时间（秒）
+    cooldown_period: 300
+
+# 性能配置
+performance:
+  # 连接池配置
+  connection_pool:
+    max_size: 20
+    min_size: 2
+    # 连接最大空闲时间（秒）
+    max_idle_time: 300
+    # 连接获取超时（秒）
+    acquire_timeout: 10
+    
+  # 会话池配置
+  session_pool:
+    # 每个服务器最大会话数
+    max_sessions_per_server: 10
+    # 会话空闲超时（秒）
+    session_idle_timeout: 600
+    # 会话清理间隔（秒）
+    cleanup_interval: 60
+    
+  # 命令执行配置
+  command_execution:
+    # 默认超时时间（秒）
+    default_timeout: 30
+    # 最大超时时间（秒）
+    max_timeout: 300
+    # 输出缓冲区大小
+    buffer_size: 8192
+    # 命令队列大小
+    queue_size: 100
+    
+  # 缓存配置
+  caching:
+    # 命令历史缓存大小
+    command_history_size: 1000
+    # 会话缓存TTL（秒）
+    session_cache_ttl: 3600
+    # 连接状态缓存TTL（秒）
+    connection_status_ttl: 60
+
+# 开发和调试配置
+development:
+  # 是否启用调试模式
+  debug: false
+  # 是否启用详细日志
+  verbose: false
+  # 是否启用性能分析
+  profiling: false
+  # 测试模式配置
+  test_mode:
+    enabled: false
+    mock_connections: false
+    fake_commands: false

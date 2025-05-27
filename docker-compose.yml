@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  cursor-bridge:
+    build: .
+    container_name: cursor-bridge
+    ports:
+      - "8082:8082"  # MCP服务器端口
+      - "8083:8083"  # 健康检查端口
+      - "9090:9090"  # Prometheus指标端口
+    volumes:
+      - ./config:/app/config:ro
+      - ~/.ssh:/root/.ssh:ro
+      - cursor-bridge-logs:/var/log
+    environment:
+      - LOG_LEVEL=INFO
+      - CONFIG_PATH=/app/config/cursor_bridge_config.yaml
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 可选：Prometheus监控
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: cursor-bridge-prometheus
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    profiles: ["monitoring"]
+
+  # 可选：Grafana仪表板
+  grafana:
+    image: grafana/grafana:latest
+    container_name: cursor-bridge-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    restart: unless-stopped
+    profiles: ["monitoring"]
+
+volumes:
+  cursor-bridge-logs:
+  prometheus-data:
+  grafana-data:
