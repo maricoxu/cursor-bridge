@@ -1,149 +1,194 @@
 """
-Cursor Bridge CLI入口
+命令行接口
 
-提供命令行接口。
+提供cursor-bridge的命令行工具。
 """
 
 import asyncio
-import logging
-import sys
+import click
+import json
 from pathlib import Path
 from typing import Optional
 
-import click
-from rich.console import Console
-from rich.logging import RichHandler
-
-from .config.loader import ConfigLoader
-from .server import CursorBridgeServer
-
-console = Console()
-
-
-def setup_logging(level: str = "INFO", verbose: bool = False):
-    """设置日志"""
-    log_level = getattr(logging, level.upper(), logging.INFO)
-    
-    # 配置rich日志处理器
-    handler = RichHandler(
-        console=console,
-        show_time=True,
-        show_path=verbose,
-        markup=True
-    )
-    
-    # 配置根日志器
-    logging.basicConfig(
-        level=log_level,
-        format="%(message)s",
-        datefmt="[%X]",
-        handlers=[handler]
-    )
-    
-    # 设置第三方库日志级别
-    if not verbose:
-        logging.getLogger("asyncio").setLevel(logging.WARNING)
-        logging.getLogger("paramiko").setLevel(logging.WARNING)
+from .server import create_server, CursorBridgeServer
+from .utils import setup_logging
 
 
 @click.group()
-@click.option("--config", "-c", 
-              default="config/cursor_bridge_config.yaml",
-              help="配置文件路径")
-@click.option("--log-level", "-l",
-              default="INFO",
-              type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR"]),
-              help="日志级别")
-@click.option("--verbose", "-v", is_flag=True, help="详细输出")
+@click.option('--config', '-c', type=click.Path(exists=True), help='配置文件路径')
+@click.option('--log-level', default='INFO', help='日志级别')
+@click.option('--log-file', type=click.Path(), help='日志文件路径')
 @click.pass_context
-def cli(ctx, config: str, log_level: str, verbose: bool):
-    """Cursor Bridge - 无缝远程开发桥梁"""
+def cli(ctx, config, log_level, log_file):
+    """Cursor Bridge - 企业远程开发解决方案"""
     ctx.ensure_object(dict)
-    ctx.obj['config_path'] = config
+    ctx.obj['config'] = config
     ctx.obj['log_level'] = log_level
-    ctx.obj['verbose'] = verbose
+    ctx.obj['log_file'] = log_file
     
-    setup_logging(log_level, verbose)
+    # 设置日志
+    setup_logging(
+        level=log_level,
+        log_file=log_file,
+        service_name="cursor-bridge"
+    )
 
 
 @cli.command()
 @click.pass_context
-def server(ctx):
-    """启动MCP服务器"""
-    config_path = ctx.obj['config_path']
+def start(ctx):
+    """启动Cursor Bridge服务器"""
+    async def _start():
+        config_path = ctx.obj.get('config')
+        server = await create_server(config_path)
+        
+        click.echo("🚀 启动Cursor Bridge服务器...")
+        click.echo(f"📦 配置了 {len(server.config.servers)} 个服务器")
+        
+        try:
+            await server.start()
+        except KeyboardInterrupt:
+            click.echo("\n⏹️  收到中断信号，正在关闭服务器...")
+            await server.stop()
+        except Exception as e:
+            click.echo(f"❌ 服务器启动失败: {e}")
+            raise
     
-    try:
-        # 加载配置
-        config = ConfigLoader.load_from_file(config_path)
-        console.print(f"[green]✓[/green] 配置加载成功: {config_path}")
-        
-        # 启动服务器
-        server_instance = CursorBridgeServer(config.dict())
-        
-        console.print("[blue]启动Cursor Bridge服务器...[/blue]")
-        asyncio.run(server_instance.start())
-        
-    except FileNotFoundError as e:
-        console.print(f"[red]✗[/red] {e}")
-        sys.exit(1)
-    except Exception as e:
-        console.print(f"[red]✗[/red] 启动失败: {e}")
-        sys.exit(1)
+    asyncio.run(_start())
 
 
 @cli.command()
 @click.pass_context
-def status(ctx):
-    """检查服务状态"""
-    console.print("[blue]检查Cursor Bridge状态...[/blue]")
-    # TODO: 实现状态检查
-    console.print("[green]✓[/green] 服务运行正常")
-
-
-@cli.command()
-@click.pass_context
-def config_check(ctx):
-    """检查配置文件"""
-    config_path = ctx.obj['config_path']
+def ping(ctx):
+    """测试服务器连通性"""
+    async def _ping():
+        config_path = ctx.obj.get('config')
+        server = await create_server(config_path)
+        
+        result = await server.ping()
+        click.echo(f"🏓 Ping结果: {json.dumps(result, indent=2)}")
     
-    try:
-        config = ConfigLoader.load_from_file(config_path)
-        console.print(f"[green]✓[/green] 配置文件有效: {config_path}")
+    asyncio.run(_ping())
+
+
+@cli.command()
+@click.pass_context
+def health(ctx):
+    """检查服务器健康状态"""
+    async def _health():
+        config_path = ctx.obj.get('config')
+        server = await create_server(config_path)
         
-        # 显示配置摘要
-        console.print(f"服务器数量: {len(config.servers)}")
-        for name in config.servers.keys():
-            console.print(f"  - {name}")
-            
-    except Exception as e:
-        console.print(f"[red]✗[/red] 配置文件错误: {e}")
-        sys.exit(1)
-
-
-@cli.command()
-@click.argument("server_name")
-@click.argument("command")
-@click.pass_context
-def exec(ctx, server_name: str, command: str):
-    """在指定服务器上执行命令"""
-    console.print(f"[blue]在 {server_name} 上执行: {command}[/blue]")
-    # TODO: 实现命令执行
-    console.print("[green]✓[/green] 命令执行完成")
+        health_info = await server.get_health()
+        click.echo(f"🏥 健康状态: {json.dumps(health_info, indent=2)}")
+    
+    asyncio.run(_health())
 
 
 @cli.command()
 @click.pass_context
-def sessions(ctx):
-    """列出所有会话"""
-    console.print("[blue]活跃会话列表:[/blue]")
-    # TODO: 实现会话列表
-    console.print("暂无活跃会话")
+def config(ctx):
+    """显示当前配置"""
+    async def _config():
+        config_path = ctx.obj.get('config')
+        server = await create_server(config_path)
+        
+        click.echo("⚙️  当前配置:")
+        click.echo(f"   配置文件: {server.config_loader._config_path or '默认配置'}")
+        click.echo(f"   服务器数量: {len(server.config.servers)}")
+        
+        for name, server_config in server.config.servers.items():
+            click.echo(f"   📡 {name}: {server_config.type}")
+            if server_config.type == "proxy" and server_config.proxy:
+                click.echo(f"      代理: {server_config.proxy.command}")
+                click.echo(f"      目标: {server_config.proxy.target_host}:{server_config.proxy.target_port}")
+            elif server_config.type == "direct" and server_config.ssh:
+                click.echo(f"      SSH: {server_config.ssh.host}:{server_config.ssh.port}")
+                click.echo(f"      用户: {server_config.ssh.username}")
+    
+    asyncio.run(_config())
 
 
-def main():
-    """主入口函数"""
+@cli.command()
+@click.option('--output', '-o', type=click.Path(), help='输出文件路径')
+def init_config(output):
+    """生成示例配置文件"""
+    config_content = """# Cursor Bridge 配置文件
+
+# 服务器配置
+servers:
+  # 企业代理连接示例
+  enterprise-dev:
+    type: proxy
+    proxy:
+      command: "enterprise-vpn-tool"
+      target_host: "internal-server.company.com"
+      target_port: 22
+      username: "developer"
+      timeout: 30
+      extra_args: []
+    session:
+      name: "enterprise-dev-session"
+      working_directory: "/home/developer"
+      environment:
+        TERM: "xterm-256color"
+        LANG: "en_US.UTF-8"
+      shell: "/bin/bash"
+
+  # 直连SSH示例
+  direct-server:
+    type: direct
+    ssh:
+      host: "192.168.1.100"
+      port: 22
+      username: "user"
+      key_file: "~/.ssh/id_rsa"
+      timeout: 10
+    session:
+      name: "direct-session"
+      working_directory: "/home/user"
+      environment: {}
+      shell: "/bin/bash"
+
+# 安全配置
+security:
+  allowed_commands:
+    - "ls"
+    - "pwd"
+    - "cd"
+    - "cat"
+    - "grep"
+    - "find"
+    - "git"
+    - "python"
+    - "node"
+    - "npm"
+    - "pip"
+  
+  blocked_commands:
+    - "rm -rf /"
+    - "sudo rm"
+    - "mkfs"
+  
+  command_timeout: 300
+  max_output_size: 10485760
+  max_concurrent_commands: 10
+"""
+    
+    output_path = Path(output) if output else Path("cursor_bridge_config.yaml")
+    
+    with open(output_path, 'w', encoding='utf-8') as f:
+        f.write(config_content)
+    
+    click.echo(f"✅ 配置文件已生成: {output_path}")
+
+
+@cli.command()
+def version():
+    """显示版本信息"""
+    click.echo("Cursor Bridge v0.1.0")
+    click.echo("企业远程开发解决方案")
+
+
+if __name__ == '__main__':
     cli()
-
-
-if __name__ == "__main__":
-    main()

@@ -7,39 +7,41 @@ servers:
   enterprise-dev:
     type: proxy
     proxy:
-      command: enterprise-vpn-tool
-      target_host: internal-server.company.com
+      command: "enterprise-vpn-tool"
+      target_host: "internal-server.company.com"
       target_port: 22
-      username: your-username
+      username: "developer"
       timeout: 30
       # 可选：VPN工具的额外参数
       extra_args: []
     session:
-      name: enterprise-dev-session
-      working_directory: /home/Code
+      name: "enterprise-dev-session"
+      working_directory: "/home/developer"
       environment:
-        TERM: xterm-256color
-        LANG: en_US.UTF-8
-      shell: /bin/bash
-      
+        TERM: "xterm-256color"
+        LANG: "en_US.UTF-8"
+      shell: "/bin/bash"
+  
   # 直接SSH连接的服务器示例
-  # direct-server:
-  #   type: direct
-  #   ssh:
-  #     host: your-server.com
-  #     port: 22
-  #     username: your-username
-  #     key_file: ~/.ssh/id_rsa
-  #     timeout: 10
-  #   session:
-  #     name: direct-session
-  #     working_directory: /home/user
+  direct-server:
+    type: direct
+    ssh:
+      host: "192.168.1.100"
+      port: 22
+      username: "user"
+      key_file: "~/.ssh/id_rsa"
+      timeout: 10
+    session:
+      name: "direct-session"
+      working_directory: "/home/user"
+      environment: {}
+      shell: "/bin/bash"
 
 # MCP服务器配置
 mcp:
   server:
-    host: localhost
-    port: 8082
+    host: "localhost"
+    port: 8080
     log_level: INFO
     max_connections: 100
     
@@ -49,89 +51,113 @@ mcp:
     auto_reconnect: true
     health_check_interval: 30
     command_timeout: 300
+    prompts: false
     
   tools:
-    - execute_command
-    - get_session_status
-    - create_session
-    - destroy_session
-    - list_sessions
+    - "execute_command"
+    - "list_sessions"
+    - "create_session"
+    - "destroy_session"
+    - "get_session_status"
     
   resources:
-    - session_logs
-    - command_history
-    - server_status
+    - "session_status"
+    - "command_history"
+    - "server_status"
 
 # 安全配置
 security:
-  # 命令白名单（为空表示允许所有命令）
-  allowed_commands: []
+  # 允许的命令（白名单）
+  allowed_commands:
+    - "ls"
+    - "pwd"
+    - "cd"
+    - "cat"
+    - "grep"
+    - "find"
+    - "git"
+    - "python"
+    - "node"
+    - "npm"
+    - "pip"
+    - "docker"
+    - "kubectl"
   
-  # 命令黑名单
+  # 禁止的命令（黑名单）
   blocked_commands:
     - "rm -rf /"
     - "sudo rm"
     - "mkfs"
-    - "dd if="
-    - ":(){ :|:& };:"
+    - "dd"
+    - "format"
     
-  # 命令模式过滤
+  # 禁止的模式
   blocked_patterns:
     - "rm.*-rf.*/"
     - "sudo.*rm"
     - "chmod.*777"
+    - ">/dev/sd"
     
-  # 执行限制
+  # 命令超时（秒）
   command_timeout: 300
+  
+  # 最大输出大小（字节）
   max_output_size: 10485760  # 10MB
+  
+  # 最大并发命令数
   max_concurrent_commands: 10
   
-  # 文件访问限制
+  # 允许的路径
   allowed_paths:
     - "/home"
     - "/tmp"
-    - "/var/log"
-    
+    - "/var/tmp"
+    - "/opt"
+  
+  # 禁止的路径
   blocked_paths:
     - "/etc/passwd"
     - "/etc/shadow"
     - "/root"
+    - "/boot"
 
 # 监控配置
 monitoring:
   metrics:
     enabled: true
     port: 9090
-    path: /metrics
+    path: "/metrics"
     
   health_check:
     enabled: true
-    port: 8083
-    path: /health
+    interval: 30
+    timeout: 5
     
   logging:
-    level: INFO
-    format: json
-    file: /var/log/cursor-bridge.log
-    max_size: 100MB
+    level: "INFO"
+    format: "json"
+    file: "logs/cursor-bridge.log"
+    max_size: "100MB"
     backup_count: 5
 
 # 性能配置
 performance:
   connection_pool:
-    max_size: 20
-    min_size: 2
-    max_idle_time: 300
+    max_connections: 10
+    connection_timeout: 30
+    idle_timeout: 300
     
   session_pool:
-    max_sessions_per_server: 10
-    session_idle_timeout: 600
+    max_sessions: 20
+    session_timeout: 1800
+    cleanup_interval: 60
     
   command_execution:
-    default_timeout: 30
-    max_timeout: 300
-    buffer_size: 8192
+    max_concurrent: 5
+    queue_size: 100
+    timeout: 300
     
   caching:
-    command_history_size: 1000
-    session_cache_ttl: 3600
+    enabled: true
+    ttl: 300
+    max_size: 1000
