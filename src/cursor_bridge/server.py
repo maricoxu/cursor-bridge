@@ -12,6 +12,7 @@ from pathlib import Path
 
 from .config import ConfigLoader, CursorBridgeConfig
 from .utils import setup_logging, get_logger, LoggerMixin
+from .connection import ConnectionManager
 
 
 class HealthChecker:
@@ -64,6 +65,7 @@ class CursorBridgeServer(LoggerMixin):
         self.config_loader = ConfigLoader()
         self.config: Optional[CursorBridgeConfig] = None
         self.health_checker = HealthChecker()
+        self.connection_manager = ConnectionManager()
         self._running = False
         self._shutdown_event = asyncio.Event()
         
@@ -141,7 +143,8 @@ class CursorBridgeServer(LoggerMixin):
         """初始化各个组件"""
         self.logger.info("初始化组件...")
         
-        # TODO: 初始化连接管理器
+        # 初始化连接管理器
+        await self.connection_manager.start()
         self.health_checker.add_check("connection_manager", "ok")
         
         # TODO: 初始化会话管理器
@@ -156,7 +159,10 @@ class CursorBridgeServer(LoggerMixin):
         """清理组件"""
         self.logger.info("清理组件...")
         
-        # TODO: 清理各个组件
+        # 清理连接管理器
+        await self.connection_manager.stop()
+        
+        # TODO: 清理其他组件
         
         self.logger.info("组件清理完成")
         
