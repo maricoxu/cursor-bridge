@@ -131,6 +131,35 @@ EOF
     log_success "启动脚本已创建: start_cursor_bridge.sh"
 }
 
+# 生成Cursor MCP配置
+create_cursor_config() {
+    log_info "生成Cursor MCP配置..."
+    
+    current_dir=$(pwd)
+    
+    cat > cursor_mcp_config.json << EOF
+{
+  "mcpServers": {
+    "cursor-bridge": {
+      "command": "python3",
+      "args": [
+        "-m", 
+        "cursor_bridge.cli", 
+        "mcp", 
+        "--config", 
+        "${current_dir}/cursor_bridge_config.yaml"
+      ],
+      "env": {
+        "PYTHONPATH": "${current_dir}/src"
+      }
+    }
+  }
+}
+EOF
+
+    log_success "Cursor MCP配置已生成: cursor_mcp_config.json"
+}
+
 # 显示使用说明
 show_usage() {
     log_success "🎉 Cursor Bridge 安装完成！"
@@ -140,10 +169,20 @@ show_usage() {
     echo "  2. 启动服务器: ./start_cursor_bridge.sh"
     echo "  3. 或手动启动: PYTHONPATH=\$PWD/src python3 -m cursor_bridge.cli start"
     echo ""
+    echo "🔗 Cursor IDE 集成:"
+    echo "  1. 打开 Cursor IDE 设置"
+    echo "  2. 找到 'MCP Servers' 配置"
+    echo "  3. 复制 cursor_mcp_config.json 的内容到配置中"
+    echo "  4. 重启 Cursor IDE"
+    echo "  5. 在 Cursor 中就可以使用 cursor-bridge 工具了！"
+    echo ""
     echo "🔧 配置说明:"
     echo "  - 配置文件包含服务器连接信息"
     echo "  - 支持直接SSH连接和企业代理连接"
     echo "  - 详细配置请参考 README.md"
+    echo ""
+    echo "🧪 测试MCP服务器:"
+    echo "  - 测试MCP: PYTHONPATH=\$PWD/src python3 -m cursor_bridge.cli mcp"
     echo ""
     echo "📚 更多帮助:"
     echo "  - 查看帮助: PYTHONPATH=\$PWD/src python3 -m cursor_bridge.cli --help"
@@ -170,6 +209,9 @@ main() {
     
     # 创建启动脚本
     create_start_script
+    
+    # 生成Cursor配置
+    create_cursor_config
     
     # 显示使用说明
     show_usage

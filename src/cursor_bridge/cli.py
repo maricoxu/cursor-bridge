@@ -184,6 +184,30 @@ security:
 
 
 @cli.command()
+@click.pass_context
+def mcp(ctx):
+    """启动MCP服务器（用于Cursor集成）"""
+    async def _mcp():
+        config_path = ctx.obj.get('config')
+        
+        # 导入MCP服务器
+        from .mcp_server import run_stdio_server
+        
+        click.echo("🔗 启动MCP服务器...")
+        click.echo("📝 日志文件: /tmp/cursor-bridge-mcp.log")
+        
+        try:
+            await run_stdio_server(config_path)
+        except KeyboardInterrupt:
+            click.echo("\n⏹️  MCP服务器已关闭")
+        except Exception as e:
+            click.echo(f"❌ MCP服务器启动失败: {e}")
+            raise
+    
+    asyncio.run(_mcp())
+
+
+@cli.command()
 def version():
     """显示版本信息"""
     click.echo("Cursor Bridge v0.1.0")

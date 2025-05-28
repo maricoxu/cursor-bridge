@@ -115,22 +115,59 @@ python3 -m cursor_bridge.cli ping
 python3 -m cursor_bridge.cli health
 ```
 
-### Cursor集成
+### Cursor IDE 集成
 
-在Cursor中配置MCP服务器：
+#### 自动配置（推荐）
+
+安装脚本会自动生成 `cursor_mcp_config.json` 文件：
+
+```bash
+# 运行安装脚本后，会生成配置文件
+./install.sh
+
+# 查看生成的配置
+cat cursor_mcp_config.json
+```
+
+#### 手动配置
+
+1. **打开Cursor设置**：
+   - 按 `Cmd/Ctrl + ,` 打开设置
+   - 搜索 "MCP" 或找到 "MCP Servers" 配置
+
+2. **添加配置**：
+   复制 `cursor_mcp_config.json` 的内容到Cursor的MCP配置中：
 
 ```json
 {
   "mcpServers": {
     "cursor-bridge": {
-      "command": "python",
-      "args": ["-m", "cursor_bridge.server"],
+      "command": "python3",
+      "args": [
+        "-m", 
+        "cursor_bridge.cli", 
+        "mcp", 
+        "--config", 
+        "/Users/xuyehua/Code/cursor-bridge/cursor_bridge_config.yaml"
+      ],
       "env": {
-        "CONFIG_PATH": "/path/to/config/cursor_bridge_config.yaml"
+        "PYTHONPATH": "/Users/xuyehua/Code/cursor-bridge/src"
       }
     }
   }
 }
+```
+
+3. **重启Cursor**：
+   - 保存配置后重启Cursor IDE
+   - 重启后就可以在Cursor中看到cursor-bridge工具了
+
+#### 验证集成
+
+```bash
+# 测试MCP服务器
+export PYTHONPATH=$PWD/src:$PYTHONPATH
+python3 -m cursor_bridge.cli mcp --config cursor_bridge_config.yaml
 ```
 
 ## 架构概览

@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "cursor-bridge": {
+      "command": "python3",
+      "args": [
+        "-m", 
+        "cursor_bridge.cli", 
+        "mcp", 
+        "--config", 
+        "/Users/xuyehua/Code/cursor-bridge/cursor_bridge_config.yaml"
+      ],
+      "env": {
+        "PYTHONPATH": "/Users/xuyehua/Code/cursor-bridge/src"
+      }
+    }
+  }
+}
