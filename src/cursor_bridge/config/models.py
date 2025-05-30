@@ -36,11 +36,18 @@ class SessionConfig(BaseModel):
     shell: str = "/bin/bash"
 
 
+class TmuxConfig(BaseModel):
+    """本地tmux会话配置"""
+    session_name: str
+    window_name: str = "main"
+
+
 class ServerConfig(BaseModel):
     """服务器配置"""
-    type: str  # proxy, direct, vpn
+    type: str  # proxy, direct, vpn, local_tmux
     proxy: Optional[ProxyConfig] = None
     ssh: Optional[SSHConfig] = None
+    tmux: Optional[TmuxConfig] = None
     session: SessionConfig
 
 
@@ -82,6 +89,7 @@ class PerformanceConfig(BaseModel):
 class CursorBridgeConfig(BaseModel):
     """Cursor Bridge完整配置"""
     servers: Dict[str, ServerConfig]
+    default_server: Optional[str] = None
     mcp: MCPConfig = Field(default_factory=MCPConfig)
     security: SecurityConfig = Field(default_factory=SecurityConfig)
     monitoring: MonitoringConfig = Field(default_factory=MonitoringConfig)

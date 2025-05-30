@@ -1,60 +1,222 @@
-# Cursor Bridge 配置文件
+# Cursor Bridge 本地tmux配置
+# 适用于本地tmux会话中已建立远程连接的场景
 
-# 服务器配置
+# 服务器配置 - 基于本地tmux会话
 servers:
-  # 企业代理连接示例
-  enterprise-dev:
-    type: proxy
-    proxy:
-      command: "enterprise-vpn-tool"
-      target_host: "internal-server.company.com"
-      target_port: 22
-      username: "developer"
-      timeout: 30
-      extra_args: []
+  # 百度内网服务器 - 通过本地tmux中的relay-cli连接
+  baidu-server:
+    type: local_tmux
+    tmux:
+      # 本地tmux会话名称（你手动创建的）
+      session_name: "baidu-session"
+      window_name: "relay-cli"
+      # 这个tmux会话运行在本地，但内部已经通过relay-cli连接到远程
+    
     session:
-      name: "enterprise-dev-session"
-      working_directory: "/home/developer"
+      name: "baidu-session"
+      # 注意：这里的工作目录是远程服务器上的路径
+      # 因为命令最终在远程服务器上执行
+      working_directory: "/workspace"
       environment:
+        # 远程服务器的环境变量
         TERM: "xterm-256color"
         LANG: "en_US.UTF-8"
+        CUDA_VISIBLE_DEVICES: "0,1,2,3"
+        PYTHONPATH: "/workspace:/workspace/src"
+        PROJECT_ROOT: "/workspace"
+        MODEL_PATH: "/workspace/models"
       shell: "/bin/bash"
 
-  # 直连SSH示例
-  direct-server:
-    type: direct
-    ssh:
-      host: "192.168.1.100"
-      port: 22
-      username: "user"
-      key_file: "~/.ssh/id_rsa"
-      timeout: 10
+  # 如果你有多个连接，可以创建多个tmux会话
+  baidu-gpu:
+    type: local_tmux
+    tmux:
+      session_name: "baidu-gpu-session"
+      window_name: "relay-cli"
+    
     session:
-      name: "direct-session"
-      working_directory: "/home/user"
-      environment: {}
+      name: "baidu-gpu-session"
+      working_directory: "/workspace/training"
+      environment:
+        TERM: "xterm-256color"
+        CUDA_VISIBLE_DEVICES: "0,1,2,3,4,5,6,7"
+        PYTHONPATH: "/workspace/training"
+        NCCL_DEBUG: "INFO"
+        WANDB_PROJECT: "my-training"
+        HF_HOME: "/workspace/.cache/huggingface"
       shell: "/bin/bash"
+
+# 默认服务器
+default_server: "baidu-server"
+
+# 本地tmux操作配置
+local_tmux:
+  # tmux命令路径
+  tmux_command: "tmux"
+  
+  # 命令发送方式
+  send_keys_method: "send-keys"
+  
+  # 输出捕获方式
+  capture_method: "capture-pane"
+  
+  # 等待命令完成的时间（秒）
+  command_wait_time: 1
+  
+  # 输出捕获延迟（秒）
+  capture_delay: 0.5
+
+# 会话管理配置
+session_management:
+  # 不自动创建会话（因为是手动创建的）
+  auto_create: false
+  
+  # 会话检查命令
+  session_check_command: "tmux list-sessions"
+  
+  # 命令超时时间（秒）
+  command_timeout: 300
+  
+  # 最大输出大小（字节）
+  max_output_size: 10485760
 
 # 安全配置
 security:
+  # 允许的命令（白名单）
   allowed_commands:
+    # 基础命令
     - "ls"
     - "pwd"
     - "cd"
     - "cat"
+    - "head"
+    - "tail"
     - "grep"
     - "find"
+    - "which"
+    - "whoami"
+    - "echo"
+    
+    # 文件操作
+    - "mkdir"
+    - "touch"
+    - "cp"
+    - "mv"
+    - "rm"
+    - "chmod"
+    - "chown"
+    - "ln"
+    
+    # 开发工具
     - "git"
     - "python"
+    - "python3"
+    - "pip"
+    - "conda"
     - "node"
     - "npm"
-    - "pip"
+    - "yarn"
+    - "docker"
+    - "kubectl"
+    
+    # 编译和构建
+    - "make"
+    - "cmake"
+    - "gcc"
+    - "g++"
+    - "nvcc"
+    - "cargo"
+    - "go"
+    
+    # 系统监控
+    - "ps"
+    - "top"
+    - "htop"
+    - "nvidia-smi"
+    - "df"
+    - "du"
+    - "free"
+    - "lscpu"
+    - "uptime"
+    - "iostat"
+    
+    # 网络工具
+    - "ping"
+    - "curl"
+    - "wget"
+    - "ssh"
+    - "scp"
+    - "rsync"
+    
+    # 文本处理
+    - "vim"
+    - "nano"
+    - "emacs"
+    - "sed"
+    - "awk"
+    - "sort"
+    - "uniq"
+    - "wc"
+    - "tr"
+    - "cut"
+    
+    # 压缩解压
+    - "tar"
+    - "gzip"
+    - "gunzip"
+    - "zip"
+    - "unzip"
+    
+    # 进程管理
+    - "nohup"
+    - "screen"
+    - "tmux"
+    - "jobs"
+    - "fg"
+    - "bg"
+    - "kill"
+    - "killall"
   
+  # 禁止的命令（黑名单）
   blocked_commands:
     - "rm -rf /"
-    - "sudo rm"
+    - "sudo rm -rf"
     - "mkfs"
+    - "fdisk"
+    - "dd if="
+    - ":(){ :|:& };:"  # fork bomb
+    - "sudo shutdown"
+    - "sudo reboot"
+    - "sudo halt"
   
+  # 命令超时时间（秒）
   command_timeout: 300
+  
+  # 最大输出大小（字节）
   max_output_size: 10485760
-  max_concurrent_commands: 10
+  
+  # 最大并发命令数
+  max_concurrent_commands: 3
+
+# 日志配置
+logging:
+  level: "INFO"
+  file: "/tmp/cursor-bridge-local-tmux.log"
+  max_size: "10MB"
+  backup_count: 5
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# 监控配置
+monitoring:
+  # 健康检查间隔（秒）
+  health_check_interval: 60
+  
+  # 连接检查命令（在tmux会话中执行）
+  health_check_command: "echo 'health_check_ok'"
+  
+  # tmux会话检查
+  tmux_session_check: true
+  
+  # 性能监控
+  enable_metrics: true
+  metrics_interval: 30 

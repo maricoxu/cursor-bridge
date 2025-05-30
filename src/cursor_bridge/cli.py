@@ -193,8 +193,8 @@ def mcp(ctx):
         # 导入MCP服务器
         from .mcp_server import run_stdio_server
         
-        click.echo("🔗 启动MCP服务器...")
-        click.echo("📝 日志文件: /tmp/cursor-bridge-mcp.log")
+        # 不要在这里输出任何内容，因为会干扰MCP协议的stdio通信
+        # MCP协议要求stdout只能用于JSON-RPC消息
         
         try:
             await run_stdio_server(config_path)

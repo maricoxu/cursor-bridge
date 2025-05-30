@@ -1,9 +1,8 @@
 #!/bin/bash
-
 # Cursor Bridge 启动脚本
 
-# 设置Python路径
-export PYTHONPATH=$PWD/src:$PYTHONPATH
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export PYTHONPATH="$SCRIPT_DIR/src:$PYTHONPATH"
 
-# 启动服务器
-python3 -m cursor_bridge.cli start --config cursor_bridge_config.yaml
+echo "🚀 启动 Cursor Bridge MCP 服务器..."
+python3 -m cursor_bridge.cli --config "$SCRIPT_DIR/cursor_bridge_config.yaml" mcp

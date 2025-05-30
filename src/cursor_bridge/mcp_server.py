@@ -9,6 +9,7 @@ import json
 import sys
 from typing import Any, Dict, List, Optional, Sequence
 from pathlib import Path
+import logging
 
 # 由于MCP需要Python 3.10+，我们先用基础实现
 # from mcp.server import Server
@@ -64,17 +65,105 @@ class MCPServer(LoggerMixin):
         """
         self.logger.info("执行命令", command=command, server=server)
         
-        # TODO: 实现真正的命令执行逻辑
-        # 这里先返回模拟结果
-        return {
-            "stdout": f"模拟执行命令: {command}",
-            "stderr": "",
-            "exit_code": 0,
-            "execution_time": 0.1,
-            "command": command,
-            "server": server,
-            "working_directory": working_directory or "/home"
-        }
+        # 获取服务器配置
+        if server == "default":
+            # 使用配置中的默认服务器
+            if hasattr(self.config, 'default_server') and self.config.default_server:
+                server = self.config.default_server
+            else:
+                # 如果没有指定默认服务器，使用第一个服务器
+                if self.config.servers:
+                    server = list(self.config.servers.keys())[0]
+                else:
+                    return {
+                        "stdout": "",
+                        "stderr": "未配置任何服务器",
+                        "exit_code": 1,
+                        "execution_time": 0,
+                        "command": command,
+                        "server": server
+                    }
+        
+        if server not in self.config.servers:
+            return {
+                "stdout": "",
+                "stderr": f"服务器 '{server}' 不存在",
+                "exit_code": 1,
+                "execution_time": 0,
+                "command": command,
+                "server": server
+            }
+        
+        server_config = self.config.servers[server]
+        
+        # 检查服务器类型，目前只支持local_tmux
+        if server_config.type != "local_tmux":
+            return {
+                "stdout": "",
+                "stderr": f"服务器类型 '{server_config.type}' 暂不支持",
+                "exit_code": 1,
+                "execution_time": 0,
+                "command": command,
+                "server": server
+            }
+        
+        try:
+            # 导入tmux后端
+            from .session.tmux_backend import tmux_backend
+            
+            # 获取tmux配置
+            tmux_config = getattr(server_config, 'tmux', None)
+            if not tmux_config:
+                return {
+                    "stdout": "",
+                    "stderr": f"服务器 '{server}' 缺少tmux配置",
+                    "exit_code": 1,
+                    "execution_time": 0,
+                    "command": command,
+                    "server": server
+                }
+            
+            session_name = tmux_config.session_name
+            window_name = getattr(tmux_config, 'window_name', 'main')
+            
+            # 获取tmux会话
+            tmux_session = tmux_backend.get_session(session_name, window_name)
+            
+            # 检查会话是否存在
+            if not await tmux_session.check_session_exists():
+                return {
+                    "stdout": "",
+                    "stderr": f"tmux会话 '{session_name}' 不存在，请先手动创建并连接到远程服务器",
+                    "exit_code": 1,
+                    "execution_time": 0,
+                    "command": command,
+                    "server": server
+                }
+            
+            # 如果指定了工作目录，先切换目录
+            if working_directory:
+                cd_command = f"cd {working_directory}"
+                await tmux_session.send_command(cd_command, wait_time=0.5)
+            
+            # 执行命令
+            result = await tmux_session.send_command(command, wait_time=1.0)
+            
+            # 添加服务器信息
+            result["server"] = server
+            result["working_directory"] = working_directory
+            
+            return result
+            
+        except Exception as e:
+            self.logger.error("执行命令失败", error=str(e))
+            return {
+                "stdout": "",
+                "stderr": f"执行命令失败: {str(e)}",
+                "exit_code": 1,
+                "execution_time": 0,
+                "command": command,
+                "server": server
+            }
     
     async def list_sessions(self, server: Optional[str] = None) -> List[Dict[str, Any]]:
         """列出会话
@@ -211,6 +300,7 @@ class SimpleMCPHandler:
     def __init__(self, mcp_server: MCPServer):
         self.mcp_server = mcp_server
         self.logger = get_logger("mcp-handler")
+        self.initialized = False
     
     async def handle_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """处理MCP请求
@@ -225,8 +315,14 @@ class SimpleMCPHandler:
         params = request.get("params", {})
         request_id = request.get("id")
         
+        self.logger.info("处理MCP请求", method=method, request_id=request_id)
+        
         try:
-            if method == "tools/list":
+            if method == "initialize":
+                return await self._handle_initialize(request_id, params)
+            elif method == "initialized":
+                return await self._handle_initialized(request_id)
+            elif method == "tools/list":
                 return await self._handle_tools_list(request_id)
             elif method == "tools/call":
                 return await self._handle_tools_call(request_id, params)
@@ -241,8 +337,38 @@ class SimpleMCPHandler:
             self.logger.error("处理请求失败", method=method, error=str(e))
             return self._error_response(request_id, -32603, f"Internal error: {str(e)}")
     
+    async def _handle_initialize(self, request_id: Any, params: Dict[str, Any]) -> Dict[str, Any]:
+        """处理初始化请求"""
+        self.logger.info("处理初始化请求", params=params)
+        
+        return {
+            "jsonrpc": "2.0",
+            "id": request_id,
+            "result": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {
+                    "tools": {},
+                    "resources": {}
+                },
+                "serverInfo": {
+                    "name": "cursor-bridge",
+                    "version": "0.1.0"
+                }
+            }
+        }
+    
+    async def _handle_initialized(self, request_id: Any) -> Dict[str, Any]:
+        """处理初始化完成通知"""
+        self.logger.info("MCP初始化完成")
+        self.initialized = True
+        
+        # 对于通知，不需要返回响应
+        return None
+    
     async def _handle_tools_list(self, request_id: Any) -> Dict[str, Any]:
         """处理工具列表请求"""
+        self.logger.info("处理工具列表请求")
+        
         tools = [
             {
                 "name": "execute_command",
@@ -257,7 +383,7 @@ class SimpleMCPHandler:
                         "server": {
                             "type": "string",
                             "description": "服务器名称",
-                            "default": "default"
+                            "default": "baidu-server"
                         },
                         "timeout": {
                             "type": "integer",
@@ -308,24 +434,6 @@ class SimpleMCPHandler:
                 }
             },
             {
-                "name": "destroy_session",
-                "description": "销毁会话",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "server": {
-                            "type": "string",
-                            "description": "服务器名称"
-                        },
-                        "session_id": {
-                            "type": "string",
-                            "description": "会话ID"
-                        }
-                    },
-                    "required": ["server", "session_id"]
-                }
-            },
-            {
                 "name": "get_session_status",
                 "description": "获取会话状态",
                 "inputSchema": {
@@ -344,6 +452,8 @@ class SimpleMCPHandler:
                 }
             }
         ]
+        
+        self.logger.info("返回工具列表", tool_count=len(tools))
         
         return {
             "jsonrpc": "2.0",
@@ -516,50 +626,83 @@ class SimpleMCPHandler:
 async def run_stdio_server(config_path: Optional[str] = None):
     """运行基于stdio的MCP服务器"""
     # 设置日志到文件，避免干扰stdio
-    setup_logging(
-        level="INFO", 
-        service_name="cursor-bridge-mcp",
-        log_file="/tmp/cursor-bridge-mcp.log"
+    # 重要：MCP协议要求stdout只能用于JSON-RPC消息
+    
+    # 清除所有现有的处理器
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+    
+    # 只设置文件日志处理器
+    file_handler = logging.FileHandler("/tmp/cursor-bridge-mcp.log")
+    file_handler.setFormatter(
+        logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     )
     
-    logger = get_logger("mcp-stdio")
-    logger.info("启动MCP服务器", config_path=config_path)
+    # 设置所有相关logger只使用文件处理器
+    loggers = [
+        logging.getLogger("cursor_bridge"),
+        logging.getLogger("mcp-stdio"),
+        logging.getLogger("mcp-handler"),
+        logging.getLogger()
+    ]
+    
+    for logger in loggers:
+        logger.handlers.clear()
+        logger.addHandler(file_handler)
+        logger.setLevel(logging.INFO)
+        logger.propagate = False
+    
+    logger = logging.getLogger("mcp-stdio")
+    logger.info("启动MCP服务器", extra={"config_path": config_path})
     
     # 创建MCP服务器
     mcp_server = MCPServer(config_path)
     handler = SimpleMCPHandler(mcp_server)
     
     # 处理stdio通信
-    while True:
-        try:
-            # 从stdin读取请求
-            line = await asyncio.get_event_loop().run_in_executor(None, sys.stdin.readline)
-            if not line:
-                break
-                
-            line = line.strip()
-            if not line:
-                continue
-            
-            # 解析JSON请求
+    try:
+        while True:
             try:
-                request = json.loads(line)
-            except json.JSONDecodeError as e:
-                logger.error("JSON解析失败", line=line, error=str(e))
+                # 从stdin读取请求
+                line = await asyncio.get_event_loop().run_in_executor(None, sys.stdin.readline)
+                if not line:
+                    logger.info("stdin关闭，退出服务器")
+                    break
+                    
+                line = line.strip()
+                if not line:
+                    continue
+                
+                logger.debug("收到请求", extra={"line": line})
+                
+                # 解析JSON请求
+                try:
+                    request = json.loads(line)
+                except json.JSONDecodeError as e:
+                    logger.error("JSON解析失败", extra={"line": line, "error": str(e)})
+                    continue
+                
+                # 处理请求
+                response = await handler.handle_request(request)
+                
+                # 发送响应到stdout（如果有响应）
+                if response is not None:
+                    response_line = json.dumps(response, ensure_ascii=False)
+                    print(response_line, flush=True)
+                    logger.debug("发送响应", extra={"response": response_line})
+                
+            except Exception as e:
+                logger.error("处理请求时发生错误", extra={"error": str(e)})
+                # 不要break，继续处理下一个请求
                 continue
-            
-            # 处理请求
-            response = await handler.handle_request(request)
-            
-            # 发送响应到stdout
-            response_line = json.dumps(response, ensure_ascii=False)
-            print(response_line, flush=True)
-            
-        except Exception as e:
-            logger.error("处理请求时发生错误", error=str(e))
-            break
     
-    logger.info("MCP服务器关闭")
+    except KeyboardInterrupt:
+        logger.info("收到中断信号")
+    except Exception as e:
+        logger.error("服务器运行时发生错误", extra={"error": str(e)})
+    finally:
+        logger.info("MCP服务器关闭")
 
 
 if __name__ == "__main__":

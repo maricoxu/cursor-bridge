@@ -5,9 +5,9 @@
       "args": [
         "-m", 
         "cursor_bridge.cli", 
-        "mcp", 
         "--config", 
-        "/Users/xuyehua/Code/cursor-bridge/cursor_bridge_config.yaml"
+        "/Users/xuyehua/Code/cursor-bridge/cursor_bridge_config.yaml",
+        "mcp"
       ],
       "env": {
         "PYTHONPATH": "/Users/xuyehua/Code/cursor-bridge/src"
