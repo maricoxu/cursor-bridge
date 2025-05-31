@@ -21,8 +21,8 @@ servers:
   baidu-tmux:
     type: "local_tmux"
     tmux:
-      session_name: "baidu"
-      window_name: "server"
+      session_name: "baidu-session"
+      window_name: "0"
     session:
       name: "baidu-dev-session"
       working_directory: "/Users/xuyehua"
