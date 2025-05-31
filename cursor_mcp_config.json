@@ -6,7 +6,7 @@
         "-m", 
         "cursor_bridge.cli", 
         "--config", 
-        "/Users/xuyehua/Code/cursor-bridge/cursor_bridge_config.yaml",
+        "/Users/xuyehua/Code/cursor-bridge/cursor_bridge_config.local.yaml",
         "mcp"
       ],
       "env": {

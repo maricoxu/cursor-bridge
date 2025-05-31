@@ -1,0 +1,2114 @@
+From a1c6f62811b0811c8025f3213dfbdf90c037adf5 Mon Sep 17 00:00:00 2001
+From: "xu.marico" <xu.marico>
+Date: Wed, 28 May 2025 23:53:08 +0800
+Subject: [PATCH] =?UTF-8?q?=E5=AE=8C=E5=96=84=E9=85=8D=E7=BD=AE=E7=AE=A1?=
+ =?UTF-8?q?=E7=90=86=E5=92=8C=E5=AE=89=E5=85=A8=E6=80=A7:=20=E6=94=AF?=
+ =?UTF-8?q?=E6=8C=81=E6=9C=AC=E5=9C=B0=E9=85=8D=E7=BD=AE=E6=96=87=E4=BB=B6?=
+ =?UTF-8?q?=E5=88=86=E7=A6=BB=EF=BC=8C=E4=BF=9D=E6=8A=A4=E6=95=8F=E6=84=9F?=
+ =?UTF-8?q?=E4=BF=A1=E6=81=AF=EF=BC=8C=E6=B7=BB=E5=8A=A0=E8=AF=A6=E7=BB=86?=
+ =?UTF-8?q?=E9=85=8D=E7=BD=AE=E7=A4=BA=E4=BE=8B=E5=92=8C=E4=BD=BF=E7=94=A8?=
+ =?UTF-8?q?=E8=AF=B4=E6=98=8E?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ .gitignore                      | 119 ++++-
+ CONFIG_EXAMPLES.md              | 356 ++++++++++++++
+ README.md                       | 794 +++++++++++---------------------
+ cursor_bridge_config.yaml       |  20 +-
+ cursor_mcp_config.json          |  14 +-
+ install.sh                      | 238 +++++++++-
+ src/cursor_bridge/mcp_server.py |  70 ++-
+ start_cursor_bridge.sh          |  15 +-
+ test_mcp.py                     | 109 +++++
+ 9 files changed, 1181 insertions(+), 554 deletions(-)
+ create mode 100644 CONFIG_EXAMPLES.md
+ create mode 100644 test_mcp.py
+
+diff --git a/.gitignore b/.gitignore
+index d8fa0ab..063c508 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -283,4 +283,121 @@ grafana_data/
+ 
+ # Development tools
+ .pre-commit-config.yaml.bak
+-.commitizen.yaml.bak
+\ No newline at end of file
++.commitizen.yaml.bak
++
++# 敏感配置文件 - 包含服务器信息，不应提交到git
++cursor_bridge_config.local.yaml
++cursor_bridge_config.*.yaml
++config.local.yaml
++*.local.yaml
++
++# SSH密钥文件
++*.pem
++*.key
++id_rsa*
++*.ppk
++
++# 环境变量文件
++.env
++.env.local
++.env.*.local
++
++# Python相关
++__pycache__/
++*.py[cod]
++*$py.class
++*.so
++.Python
++build/
++develop-eggs/
++dist/
++downloads/
++eggs/
++.eggs/
++lib/
++lib64/
++parts/
++sdist/
++var/
++wheels/
++pip-wheel-metadata/
++share/python-wheels/
++*.egg-info/
++.installed.cfg
++*.egg
++MANIFEST
++
++# 虚拟环境
++.venv/
++venv/
++ENV/
++env/
++.env/
++
++# IDE相关
++.vscode/
++.idea/
++*.swp
++*.swo
++*~
++
++# 日志文件
++*.log
++logs/
++log/
++
++# 临时文件
++*.tmp
++*.temp
++.tmp/
++.temp/
++
++# 操作系统相关
++.DS_Store
++.DS_Store?
++._*
++.Spotlight-V100
++.Trashes
++ehthumbs.db
++Thumbs.db
++
++# 测试相关
++.pytest_cache/
++.coverage
++htmlcov/
++.tox/
++.nox/
++coverage.xml
++*.cover
++*.py,cover
++.hypothesis/
++
++# 文档构建
++docs/_build/
++.readthedocs.yml
++
++# 备份文件
++*.bak
++*.backup
++*.orig
++
++# 数据库文件
++*.db
++*.sqlite
++*.sqlite3
++
++# 配置备份
++config_backup_*
++*.config.bak
++
++# 企业相关敏感信息
++*company*
++*enterprise*
++*internal*
++*vpn*
++*proxy*
++
++# 个人配置文件
++my_*
++personal_*
++private_*
+\ No newline at end of file
+diff --git a/CONFIG_EXAMPLES.md b/CONFIG_EXAMPLES.md
+new file mode 100644
+index 0000000..03e6677
+--- /dev/null
++++ b/CONFIG_EXAMPLES.md
+@@ -0,0 +1,356 @@
++# Cursor Bridge 配置示例
++
++本文档提供了各种常见场景下的配置示例，帮助你快速配置cursor-bridge。
++
++## 🔧 基本配置步骤
++
++1. **复制配置模板**
++   ```bash
++   cp cursor_bridge_config.yaml cursor_bridge_config.local.yaml
++   ```
++
++2. **编辑本地配置文件**
++   ```bash
++   vim cursor_bridge_config.local.yaml
++   ```
++
++3. **启动服务**
++   ```bash
++   ./start_cursor_bridge.sh
++   ```
++
++## 📋 配置示例
++
++### 1. 阿里云/腾讯云服务器（直接SSH）
++
++```yaml
++servers:
++  aliyun-server:
++    type: direct
++    ssh:
++      host: "47.xxx.xxx.xxx"          # 你的服务器公网IP
++      port: 22                        # SSH端口
++      username: "root"                # 用户名
++      key_file: "~/.ssh/aliyun_rsa"  # SSH私钥路径
++      timeout: 10
++    session:
++      name: "aliyun-dev"
++      working_directory: "/root/projects"
++      environment:
++        TERM: "xterm-256color"
++        LANG: "en_US.UTF-8"
++      shell: "/bin/bash"
++```
++
++### 2. 公司内网服务器（通过VPN）
++
++```yaml
++servers:
++  company-dev:
++    type: proxy
++    proxy:
++      command: "cisco-anyconnect"     # VPN工具命令
++      target_host: "10.0.1.100"      # 内网服务器IP
++      target_port: 22
++      username: "developer"
++      timeout: 30
++    session:
++      name: "company-session"
++      working_directory: "/home/developer/workspace"
++      environment:
++        TERM: "xterm-256color"
++        NODE_ENV: "development"
++      shell: "/bin/bash"
++```
++
++### 3. 通过跳板机连接
++
++```yaml
++servers:
++  jump-server:
++    type: proxy
++    proxy:
++      command: "ssh"
++      args: ["-J", "jump@jumphost.company.com", "target@targethost.company.com"]
++      timeout: 20
++    session:
++      name: "jump-session"
++      working_directory: "/home/target/code"
++      environment:
++        TERM: "xterm-256color"
++      shell: "/bin/bash"
++```
++
++### 4. 使用密码认证（不推荐）
++
++```yaml
++servers:
++  password-server:
++    type: direct
++    ssh:
++      host: "192.168.1.100"
++      port: 22
++      username: "user"
++      password: "your-password"       # 明文密码，不安全
++      timeout: 10
++    session:
++      name: "password-session"
++      working_directory: "/home/user"
++      shell: "/bin/bash"
++```
++
++### 5. 多服务器配置
++
++```yaml
++servers:
++  # 开发服务器
++  dev-server:
++    type: direct
++    ssh:
++      host: "dev.company.com"
++      port: 22
++      username: "developer"
++      key_file: "~/.ssh/dev_rsa"
++    session:
++      name: "dev-session"
++      working_directory: "/home/developer/projects"
++      environment:
++        NODE_ENV: "development"
++      shell: "/bin/bash"
++  
++  # 测试服务器
++  test-server:
++    type: direct
++    ssh:
++      host: "test.company.com"
++      port: 22
++      username: "tester"
++      key_file: "~/.ssh/test_rsa"
++    session:
++      name: "test-session"
++      working_directory: "/home/tester/testing"
++      environment:
++        NODE_ENV: "testing"
++      shell: "/bin/bash"
++  
++  # 生产服务器（只读）
++  prod-server:
++    type: direct
++    ssh:
++      host: "prod.company.com"
++      port: 22
++      username: "readonly"
++      key_file: "~/.ssh/prod_readonly_rsa"
++    session:
++      name: "prod-readonly"
++      working_directory: "/var/log"
++      shell: "/bin/bash"
++```
++
++## 🔒 安全配置
++
++### SSH密钥配置
++
++```bash
++# 生成专用SSH密钥
++ssh-keygen -t rsa -b 4096 -f ~/.ssh/cursor_bridge_rsa
++
++# 设置正确的权限
++chmod 600 ~/.ssh/cursor_bridge_rsa
++chmod 644 ~/.ssh/cursor_bridge_rsa.pub
++
++# 将公钥添加到服务器
++ssh-copy-id -i ~/.ssh/cursor_bridge_rsa.pub user@your-server.com
++```
++
++### 命令安全过滤
++
++```yaml
++security:
++  # 允许的命令（白名单）
++  allowed_commands:
++    - "ls"
++    - "cd"
++    - "pwd"
++    - "cat"
++    - "grep"
++    - "find"
++    - "git"
++    - "npm"
++    - "python"
++    - "node"
++    - "docker"
++    - "kubectl"
++    
++  # 禁止的命令（黑名单）
++  blocked_commands:
++    - "rm -rf /"
++    - "sudo rm"
++    - "mkfs"
++    - "dd if="
++    - "shutdown"
++    - "reboot"
++    - "passwd"
++    - "userdel"
++    
++  # 命令超时（秒）
++  command_timeout: 300
++  
++  # 最大输出大小（字节）
++  max_output_size: 10485760  # 10MB
++```
++
++## 🌐 企业VPN工具配置
++
++### Cisco AnyConnect
++
++```yaml
++servers:
++  cisco-server:
++    type: proxy
++    proxy:
++      command: "/opt/cisco/anyconnect/bin/vpn"
++      args: ["-s", "connect", "vpn.company.com"]
++      target_host: "internal.company.com"
++      target_port: 22
++      username: "employee"
++      timeout: 30
++```
++
++### OpenVPN
++
++```yaml
++servers:
++  openvpn-server:
++    type: proxy
++    proxy:
++      command: "openvpn"
++      args: ["--config", "/etc/openvpn/company.ovpn"]
++      target_host: "10.0.0.100"
++      target_port: 22
++      username: "user"
++      timeout: 30
++```
++
++### 自定义VPN脚本
++
++```yaml
++servers:
++  custom-vpn:
++    type: proxy
++    proxy:
++      command: "/usr/local/bin/company-vpn-connect"
++      args: ["--profile", "development"]
++      target_host: "dev-internal.company.com"
++      target_port: 22
++      username: "developer"
++      timeout: 45
++```
++
++## 🔧 高级配置
++
++### 环境变量配置
++
++```yaml
++servers:
++  node-server:
++    type: direct
++    ssh:
++      host: "node.company.com"
++      port: 22
++      username: "nodejs"
++      key_file: "~/.ssh/node_rsa"
++    session:
++      name: "node-dev"
++      working_directory: "/home/nodejs/app"
++      environment:
++        NODE_ENV: "development"
++        PORT: "3000"
++        DATABASE_URL: "postgresql://localhost:5432/myapp"
++        REDIS_URL: "redis://localhost:6379"
++        PATH: "/home/nodejs/.nvm/versions/node/v18.17.0/bin:$PATH"
++      shell: "/bin/bash"
++```
++
++### 自定义Shell配置
++
++```yaml
++servers:
++  zsh-server:
++    type: direct
++    ssh:
++      host: "zsh.company.com"
++      port: 22
++      username: "developer"
++      key_file: "~/.ssh/dev_rsa"
++    session:
++      name: "zsh-session"
++      working_directory: "/home/developer"
++      environment:
++        TERM: "xterm-256color"
++        LANG: "en_US.UTF-8"
++        ZSH: "/home/developer/.oh-my-zsh"
++      shell: "/bin/zsh"
++```
++
++## 🧪 测试配置
++
++### 测试SSH连接
++
++```bash
++# 手动测试SSH连接
++ssh -i ~/.ssh/your_key user@your-server.com
++
++# 测试VPN工具
++your-vpn-tool --test
++
++# 测试cursor-bridge配置
++export PYTHONPATH=$PWD/src:$PYTHONPATH
++python3 -m cursor_bridge.cli ping --config cursor_bridge_config.local.yaml
++```
++
++### 调试模式
++
++```bash
++# 启用详细日志
++export LOG_LEVEL=DEBUG
++python3 -m cursor_bridge.cli mcp --config cursor_bridge_config.local.yaml
++
++# 查看详细错误信息
++python3 -m cursor_bridge.cli health --verbose --config cursor_bridge_config.local.yaml
++```
++
++## ❗ 常见问题
++
++### 1. SSH连接失败
++
++**检查项目：**
++- SSH密钥权限：`chmod 600 ~/.ssh/your_key`
++- 服务器IP和端口是否正确
++- 用户名是否正确
++- 防火墙是否阻止连接
++
++### 2. VPN工具无法连接
++
++**检查项目：**
++- VPN工具路径是否正确：`which your-vpn-tool`
++- VPN配置是否正确
++- 网络连接是否正常
++
++### 3. 权限错误
++
++**解决方案：**
++```bash
++# 修复SSH密钥权限
++chmod 600 ~/.ssh/your_key
++chmod 644 ~/.ssh/your_key.pub
++
++# 修复配置文件权限
++chmod 600 cursor_bridge_config.local.yaml
++```
++
++## 📚 更多帮助
++
++- [README.md](README.md) - 完整文档
++- [GitHub Issues](https://github.com/maricoxu/cursor-bridge/issues) - 问题反馈
++- [项目主页](https://github.com/maricoxu/cursor-bridge) - 最新版本 
+\ No newline at end of file
+diff --git a/README.md b/README.md
+index aba4635..dd56315 100644
+--- a/README.md
++++ b/README.md
+@@ -20,389 +20,243 @@ Cursor Bridge 是一个基于Model Context Protocol (MCP)的远程终端代理
+ - 🔧 **易配置**: YAML配置，开箱即用
+ - 📊 **可观测**: 完整的监控和日志系统
+ 
+-## 快速开始
++## 🚀 快速开始
+ 
+-### 方式一：自动安装（推荐）
++### 第一步：安装和初始化
+ 
+ ```bash
+ # 克隆项目
+ git clone https://github.com/maricoxu/cursor-bridge.git
+ cd cursor-bridge
+ 
+-# 运行自动安装脚本
++# 运行自动安装脚本（推荐）
+ ./install.sh
+ ```
+ 
+ 安装脚本会自动：
+-- 检查Python环境（需要Python 3.9+）
+-- 安装所有依赖包
+-- 生成默认配置文件
+-- 运行基本测试
+-- 创建启动脚本
++- ✅ 检查Python环境（需要Python 3.9+）
++- ✅ 安装所有依赖包
++- ✅ 生成默认配置文件
++- ✅ 自动配置Cursor IDE集成
++- ✅ 运行基本测试
+ 
+-### 方式二：手动安装
++### 第二步：配置你的服务器
+ 
+-```bash
+-# 克隆项目
+-git clone https://github.com/maricoxu/cursor-bridge.git
+-cd cursor-bridge
++安装完成后，你需要配置实际的服务器连接信息：
+ 
+-# 安装依赖
+-pip3 install -r requirements.txt
++#### 2.1 复制配置模板
+ 
+-# 生成配置文件
+-export PYTHONPATH=$PWD/src:$PYTHONPATH
+-python3 -m cursor_bridge.cli init-config
++```bash
++# 复制配置模板（保护敏感信息）
++cp cursor_bridge_config.yaml cursor_bridge_config.local.yaml
+ ```
+ 
+-### 配置服务器
++#### 2.2 编辑本地配置文件
+ 
+-编辑生成的 `cursor_bridge_config.yaml` 文件：
++编辑 `cursor_bridge_config.local.yaml`：
+ 
+ ```yaml
+-# 服务器配置示例
++# 服务器配置 - 请根据你的实际情况修改
+ servers:
+-  # 企业代理连接
+-  enterprise-dev:
++  # 示例1：直接SSH连接
++  my-dev-server:
++    type: direct
++    ssh:
++      host: "192.168.1.100"           # 替换为你的服务器IP
++      port: 22                        # SSH端口
++      username: "your-username"       # 替换为你的用户名
++      key_file: "~/.ssh/id_rsa"      # SSH私钥路径
++      # password: "your-password"     # 如果使用密码认证
++      timeout: 10
++    session:
++      name: "dev-session"
++      working_directory: "/home/your-username/Code"  # 工作目录
++      environment:
++        TERM: "xterm-256color"
++        LANG: "en_US.UTF-8"
++      shell: "/bin/bash"
++
++  # 示例2：通过企业VPN/跳板机连接
++  company-server:
+     type: proxy
+     proxy:
+-      command: "enterprise-vpn-tool"  # 你的企业VPN工具命令
+-      target_host: "internal-server.company.com"
++      command: "your-vpn-tool"        # 替换为你的VPN工具命令
++      target_host: "internal.company.com"  # 内网服务器地址
+       target_port: 22
+-      username: "your-username"
++      username: "your-work-username"
++      timeout: 30
+     session:
+-      name: "enterprise-dev-session"
++      name: "company-dev-session"
+       working_directory: "/home/Code"
+-      
+-  # 直接SSH连接
+-  direct-server:
++      environment:
++        TERM: "xterm-256color"
++        NODE_ENV: "development"
++      shell: "/bin/bash"
++```
++
++#### 2.3 常见配置场景
++
++**场景1：阿里云/腾讯云服务器**
++```yaml
++servers:
++  aliyun-server:
+     type: direct
+     ssh:
+-      host: "192.168.1.100"
++      host: "47.xxx.xxx.xxx"          # 公网IP
+       port: 22
+-      username: "user"
+-      key_file: "~/.ssh/id_rsa"
++      username: "root"                # 或其他用户
++      key_file: "~/.ssh/aliyun_rsa"  # 阿里云密钥
++      timeout: 10
+     session:
+-      name: "direct-session"
+-      working_directory: "/home/user"
++      name: "aliyun-dev"
++      working_directory: "/root/projects"
++      shell: "/bin/bash"
+ ```
+ 
+-### 启动服务
+-
+-```bash
+-# 使用生成的启动脚本（推荐）
+-./start_cursor_bridge.sh
+-
+-# 或手动启动
+-export PYTHONPATH=$PWD/src:$PYTHONPATH
+-python3 -m cursor_bridge.cli start --config cursor_bridge_config.yaml
+-
+-# 或使用Docker
+-docker run -d -p 8082:8082 -v $(pwd)/config:/app/config cursor-bridge
++**场景2：公司内网服务器（通过VPN）**
++```yaml
++servers:
++  company-dev:
++    type: proxy
++    proxy:
++      command: "cisco-anyconnect"     # 或其他VPN工具
++      target_host: "10.0.1.100"      # 内网IP
++      target_port: 22
++      username: "developer"
++      timeout: 30
++    session:
++      name: "company-session"
++      working_directory: "/home/developer/workspace"
++      shell: "/bin/bash"
+ ```
+ 
+-### 验证安装
+-
+-```bash
+-# 检查版本
+-export PYTHONPATH=$PWD/src:$PYTHONPATH
+-python3 -m cursor_bridge.cli version
+-
+-# 测试连通性
+-python3 -m cursor_bridge.cli ping
+-
+-# 检查健康状态
+-python3 -m cursor_bridge.cli health
++**场景3：通过跳板机连接**
++```yaml
++servers:
++  jump-server:
++    type: proxy
++    proxy:
++      command: "ssh"
++      args: ["-J", "jump@jumphost.com", "target@targethost.com"]
++      timeout: 20
++    session:
++      name: "jump-session"
++      working_directory: "/home/target/code"
++      shell: "/bin/bash"
+ ```
+ 
+-### Cursor IDE 集成
+-
+-#### 自动配置（推荐）
+-
+-安装脚本会自动生成 `cursor_mcp_config.json` 文件：
++### 第三步：启动服务
+ 
+ ```bash
+-# 运行安装脚本后，会生成配置文件
+-./install.sh
++# 使用本地配置启动
++./start_cursor_bridge.sh --config cursor_bridge_config.local.yaml
+ 
+-# 查看生成的配置
+-cat cursor_mcp_config.json
+-```
+-
+-#### 手动配置
+-
+-1. **打开Cursor设置**：
+-   - 按 `Cmd/Ctrl + ,` 打开设置
+-   - 搜索 "MCP" 或找到 "MCP Servers" 配置
+-
+-2. **添加配置**：
+-   复制 `cursor_mcp_config.json` 的内容到Cursor的MCP配置中：
+-
+-```json
+-{
+-  "mcpServers": {
+-    "cursor-bridge": {
+-      "command": "python3",
+-      "args": [
+-        "-m", 
+-        "cursor_bridge.cli", 
+-        "mcp", 
+-        "--config", 
+-        "/Users/xuyehua/Code/cursor-bridge/cursor_bridge_config.yaml"
+-      ],
+-      "env": {
+-        "PYTHONPATH": "/Users/xuyehua/Code/cursor-bridge/src"
+-      }
+-    }
+-  }
+-}
++# 或者手动启动
++export PYTHONPATH=$PWD/src:$PYTHONPATH
++python3 -m cursor_bridge.cli start --config cursor_bridge_config.local.yaml
+ ```
+ 
+-3. **重启Cursor**：
+-   - 保存配置后重启Cursor IDE
+-   - 重启后就可以在Cursor中看到cursor-bridge工具了
+-
+-#### 验证集成
++### 第四步：验证配置
+ 
+ ```bash
+-# 测试MCP服务器
++# 检查服务状态
+ export PYTHONPATH=$PWD/src:$PYTHONPATH
+-python3 -m cursor_bridge.cli mcp --config cursor_bridge_config.yaml
+-```
+-
+-## 架构概览
++python3 -m cursor_bridge.cli health --config cursor_bridge_config.local.yaml
+ 
+-```
+-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+-│   Cursor IDE    │    │  Cursor Bridge   │    │  Remote Server  │
+-│                 │    │      MCP         │    │                 │
+-│  ┌───────────┐  │    │  ┌─────────────┐ │    │  ┌───────────┐  │
+-│  │   Agent   │◄─┼────┼─►│ MCP Server  │ │    │  │   tmux    │  │
+-│  └───────────┘  │    │  └─────────────┘ │    │  │ Session   │  │
+-│                 │    │  ┌─────────────┐ │    │  └───────────┘  │
+-│  ┌───────────┐  │    │  │ Connection  │◄┼────┼─►┌───────────┐  │
+-│  │ Terminal  │  │    │  │  Manager    │ │    │  │   Shell   │  │
+-│  └───────────┘  │    │  └─────────────┘ │    │  └───────────┘  │
+-└─────────────────┘    └──────────────────┘    └─────────────────┘
++# 测试连接
++python3 -m cursor_bridge.cli ping --config cursor_bridge_config.local.yaml
+ ```
+ 
+-## 使用示例
++### 第五步：在Cursor中使用
+ 
+-### CLI命令
++1. **重启Cursor IDE**（如果还没重启的话）
++2. **验证集成**：在Cursor中应该能看到cursor-bridge工具
++3. **开始使用**：现在你可以让Cursor的AI直接在远程服务器上执行命令了！
+ 
+-```bash
+-# 查看所有可用命令
+-export PYTHONPATH=$PWD/src:$PYTHONPATH
+-python3 -m cursor_bridge.cli --help
++## 🎯 在Cursor中的使用方法
+ 
+-# 启动服务器
+-python3 -m cursor_bridge.cli start
++### 基本使用
+ 
+-# 查看配置
+-python3 -m cursor_bridge.cli config
++配置完成后，你可以在Cursor中这样使用：
+ 
+-# 生成新配置文件
+-python3 -m cursor_bridge.cli init-config --output my_config.yaml
+ ```
+-
+-### MCP工具使用（开发中）
+-
+-```python
+-# Cursor Agent 可以直接执行远程命令
+-await execute_command("ls -la /home/Code")
+-await execute_command("git status")
+-await execute_command("npm run build")
++# 直接告诉Cursor AI：
++"请在远程服务器上查看当前目录的文件"
++"帮我在服务器上运行 git status"
++"在远程服务器上安装 npm 依赖"
++"检查服务器上的 Python 版本"
+ ```
+ 
+-### 多服务器支持（开发中）
++### 高级使用
+ 
+-```python
+-# 在不同服务器上执行命令
+-await execute_command("ls", server="enterprise-dev")
+-await execute_command("ps aux", server="staging-server")
+ ```
+-
+-### 会话管理（开发中）
+-
+-```python
+-# 创建新会话
+-await create_session("my-project", config={
+-    "working_directory": "/home/Code/my-project",
+-    "environment": {"NODE_ENV": "development"}
+-})
+-
+-# 在特定会话中执行命令
+-await execute_command("npm start", session="my-project")
++# 多步骤操作：
++"请在远程服务器上：
++1. 进入项目目录
++2. 拉取最新代码
++3. 安装依赖
++4. 运行测试"
++
++# 调试和分析：
++"帮我在服务器上调试这个错误，查看日志文件"
++"分析服务器的性能，查看CPU和内存使用情况"
+ ```
+ 
+-## 项目结构
++### 一次配置，永久使用
+ 
+-```
+-cursor-bridge/
+-├── src/
+-│   ├── cursor_bridge/
+-│   │   ├── __init__.py
+-│   │   ├── server.py              # MCP服务器主入口
+-│   │   ├── connection/            # 连接管理模块
+-│   │   │   ├── manager.py         # 连接管理器
+-│   │   │   ├── strategies/        # 连接策略
+-│   │   │   └── pool.py           # 连接池
+-│   │   ├── session/              # 会话管理模块
+-│   │   │   ├── manager.py        # 会话管理器
+-│   │   │   ├── tmux.py          # tmux会话实现
+-│   │   │   └── buffer.py        # 输出缓冲
+-│   │   ├── executor/             # 命令执行模块
+-│   │   │   ├── command.py        # 命令执行器
+-│   │   │   ├── interactive.py    # 交互式命令
+-│   │   │   └── history.py       # 命令历史
+-│   │   ├── config/              # 配置管理
+-│   │   │   ├── models.py        # 配置数据模型
+-│   │   │   └── loader.py        # 配置加载器
+-│   │   └── utils/               # 工具模块
+-│   │       ├── logging.py       # 日志工具
+-│   │       ├── security.py      # 安全工具
+-│   │       └── monitoring.py    # 监控工具
+-├── tests/                       # 测试代码
+-├── config/                      # 配置文件
+-├── docs/                        # 文档
+-├── scripts/                     # 脚本工具
+-├── docker/                      # Docker配置
+-├── requirements.txt             # 依赖列表
+-├── pyproject.toml              # 项目配置
+-├── DESIGN.md                   # 设计文档
+-└── README.md                   # 项目说明
+-```
++✅ **配置一次后，Cursor会记住你的设置**
++- 每次打开Cursor都能直接使用远程服务器
++- 不需要重复输入服务器信息
++- AI会自动选择合适的服务器执行命令
+ 
+-## 开发指南
++✅ **智能服务器选择**
++- 如果只配置了一个服务器，AI会自动使用它
++- 如果配置了多个服务器，你可以指定："在公司服务器上执行..."
+ 
+-### 环境准备
++## 🔒 安全配置指南
+ 
+-```bash
+-# 安装开发依赖
+-poetry install --with dev
++### 保护敏感信息
+ 
+-# 安装pre-commit钩子
+-pre-commit install
++为了保护你的服务器信息不被意外提交到GitHub，我们建议：
+ 
+-# 运行测试
+-pytest
++#### 1. 使用本地配置文件
+ 
+-# 代码格式化
+-black src/ tests/
+-isort src/ tests/
++```bash
++# 复制配置模板
++cp cursor_bridge_config.yaml cursor_bridge_config.local.yaml
+ 
+-# 类型检查
+-mypy src/
++# 编辑本地配置（这个文件不会被提交到git）
++vim cursor_bridge_config.local.yaml
+ ```
+ 
+-### 添加新的连接策略
++#### 2. 配置环境变量
+ 
+-```python
+-# src/cursor_bridge/connection/strategies/custom.py
+-from .base import ConnectionStrategy
+-
+-class CustomConnectionStrategy(ConnectionStrategy):
+-    async def connect(self, config: ServerConfig) -> Connection:
+-        # 实现自定义连接逻辑
+-        pass
+-    
+-    async def health_check(self, connection: Connection) -> bool:
+-        # 实现健康检查
+-        pass
++```bash
++# 在 ~/.bashrc 或 ~/.zshrc 中添加：
++export CURSOR_BRIDGE_CONFIG="/path/to/cursor_bridge_config.local.yaml"
++export CURSOR_BRIDGE_SSH_KEY="/path/to/your/private/key"
+ ```
+ 
+-### 扩展MCP工具
++#### 3. 使用SSH密钥认证（推荐）
++
++```bash
++# 生成SSH密钥对
++ssh-keygen -t rsa -b 4096 -f ~/.ssh/cursor_bridge_rsa
+ 
+-```python
+-# src/cursor_bridge/tools/custom.py
+-from mcp import tool
++# 将公钥添加到服务器
++ssh-copy-id -i ~/.ssh/cursor_bridge_rsa.pub user@your-server.com
+ 
+-@tool("custom_command")
+-async def custom_command(param: str) -> str:
+-    """自定义MCP工具"""
+-    # 实现自定义功能
+-    return result
++# 在配置中使用私钥
++key_file: "~/.ssh/cursor_bridge_rsa"
+ ```
+ 
+-## 配置参考
++### 命令安全过滤
+ 
+-### 完整配置示例
++在配置文件中设置安全策略：
+ 
+ ```yaml
+-# 服务器配置
+-servers:
+-  # 通过企业VPN工具连接的服务器
+-  enterprise-dev:
+-    type: proxy
+-    proxy:
+-      command: enterprise-vpn-tool
+-      target_host: internal-server.company.com
+-      target_port: 22
+-      username: your-username
+-      timeout: 30
+-    session:
+-      name: enterprise-dev-session
+-      working_directory: /home/Code
+-      environment:
+-        TERM: xterm-256color
+-        LANG: en_US.UTF-8
+-      shell: /bin/bash
+-      
+-  # 直接SSH连接的服务器
+-  direct-server:
+-    type: direct
+-    ssh:
+-      host: direct-server.com
+-      port: 22
+-      username: user
+-      key_file: ~/.ssh/id_rsa
+-      timeout: 10
+-    session:
+-      name: direct-session
+-      working_directory: /home/user
+-      
+-  # 通过代理连接的服务器
+-  proxy-server:
+-    type: proxy
+-    proxy:
+-      host: proxy.company.com
+-      port: 8080
+-      username: proxy-user
+-    target:
+-      host: internal-server.com
+-      port: 22
+-      username: target-user
+-
+-# MCP服务器配置
+-mcp:
+-  server:
+-    host: localhost
+-    port: 8082
+-    log_level: INFO
+-    max_connections: 100
+-    
+-  features:
+-    command_history: true
+-    session_persistence: true
+-    auto_reconnect: true
+-    health_check_interval: 30
+-    command_timeout: 300
+-    
+-  tools:
+-    - execute_command
+-    - get_session_status
+-    - create_session
+-    - destroy_session
+-    - list_sessions
+-    
+-  resources:
+-    - session_logs
+-    - command_history
+-    - server_status
+-
+-# 安全配置
+ security:
+-  # 命令白名单
++  # 允许的命令（白名单）
+   allowed_commands:
+     - "ls"
+     - "cd"
+@@ -413,230 +267,162 @@ security:
+     - "git"
+     - "npm"
+     - "python"
+-    - "make"
++    - "node"
+     - "docker"
+     - "kubectl"
+     
+-  # 命令黑名单
++  # 禁止的命令（黑名单）
+   blocked_commands:
+     - "rm -rf /"
+     - "sudo rm"
+     - "mkfs"
+     - "dd if="
+-    - ":(){ :|:& };:"
+-    
+-  # 命令模式过滤
+-  blocked_patterns:
+-    - "rm.*-rf.*/"
+-    - "sudo.*rm"
+-    - "chmod.*777"
++    - "shutdown"
++    - "reboot"
+     
+-  # 执行限制
++  # 命令超时（秒）
+   command_timeout: 300
+-  max_output_size: 10485760  # 10MB
+-  max_concurrent_commands: 10
+   
+-  # 文件访问限制
+-  allowed_paths:
+-    - "/home"
+-    - "/tmp"
+-    - "/var/log"
+-    
+-  blocked_paths:
+-    - "/etc/passwd"
+-    - "/etc/shadow"
+-    - "/root"
+-
+-# 监控配置
+-monitoring:
+-  metrics:
+-    enabled: true
+-    port: 9090
+-    path: /metrics
+-    
+-  health_check:
+-    enabled: true
+-    port: 8083
+-    path: /health
+-    
+-  logging:
+-    level: INFO
+-    format: json
+-    file: /var/log/cursor-bridge.log
+-    max_size: 100MB
+-    backup_count: 5
+-    
+-  alerts:
+-    connection_failure_threshold: 3
+-    command_timeout_threshold: 5
+-    error_rate_threshold: 0.1
+-
+-# 性能配置
+-performance:
+-  connection_pool:
+-    max_size: 20
+-    min_size: 2
+-    max_idle_time: 300
+-    
+-  session_pool:
+-    max_sessions_per_server: 10
+-    session_idle_timeout: 600
+-    
+-  command_execution:
+-    default_timeout: 30
+-    max_timeout: 300
+-    buffer_size: 8192
+-    
+-  caching:
+-    command_history_size: 1000
+-    session_cache_ttl: 3600
++  # 最大输出大小（字节）
++  max_output_size: 10485760  # 10MB
+ ```
+ 
+-## 部署指南
++## 📋 CLI命令参考
+ 
+-### Docker部署
++### 基本命令
+ 
+ ```bash
+-# 构建镜像
+-docker build -t cursor-bridge .
+-
+-# 运行容器
+-docker run -d \
+-  --name cursor-bridge \
+-  -p 8082:8082 \
+-  -v $(pwd)/config:/app/config \
+-  -v ~/.ssh:/root/.ssh:ro \
+-  cursor-bridge
+-```
++# 设置环境变量（每次使用前）
++export PYTHONPATH=$PWD/src:$PYTHONPATH
+ 
+-### 系统服务部署
++# 查看版本
++python3 -m cursor_bridge.cli version
+ 
+-```bash
+-# 安装为systemd服务
+-sudo cp scripts/cursor-bridge.service /etc/systemd/system/
+-sudo systemctl daemon-reload
+-sudo systemctl enable cursor-bridge
+-sudo systemctl start cursor-bridge
+-```
++# 查看帮助
++python3 -m cursor_bridge.cli --help
+ 
+-### Kubernetes部署
++# 生成配置文件
++python3 -m cursor_bridge.cli init-config
+ 
+-```yaml
+-# k8s/deployment.yaml
+-apiVersion: apps/v1
+-kind: Deployment
+-metadata:
+-  name: cursor-bridge
+-spec:
+-  replicas: 2
+-  selector:
+-    matchLabels:
+-      app: cursor-bridge
+-  template:
+-    metadata:
+-      labels:
+-        app: cursor-bridge
+-    spec:
+-      containers:
+-      - name: cursor-bridge
+-        image: cursor-bridge:latest
+-        ports:
+-        - containerPort: 8082
+-        volumeMounts:
+-        - name: config
+-          mountPath: /app/config
+-      volumes:
+-      - name: config
+-        configMap:
+-          name: cursor-bridge-config
+-```
++# 查看当前配置
++python3 -m cursor_bridge.cli config
++
++# 测试连接
++python3 -m cursor_bridge.cli ping
+ 
+-## 监控和运维
++# 检查健康状态
++python3 -m cursor_bridge.cli health
++```
+ 
+-### 健康检查
++### 服务管理
+ 
+ ```bash
+-# 检查服务状态
+-curl http://localhost:8083/health
++# 启动主服务器
++python3 -m cursor_bridge.cli start --config cursor_bridge_config.local.yaml
+ 
+-# 检查连接状态
+-curl http://localhost:8083/connections
++# 启动MCP服务器（Cursor集成）
++python3 -m cursor_bridge.cli mcp --config cursor_bridge_config.local.yaml
+ 
+-# 检查会话状态
+-curl http://localhost:8083/sessions
++# 使用自定义配置
++python3 -m cursor_bridge.cli start -c /path/to/config.yaml
+ ```
+ 
+-### 监控指标
++## 🔧 故障排除
++
++### 常见问题
++
++#### 1. "No tools available" 错误
++
++**原因**：Cursor无法连接到MCP服务器
+ 
++**解决方案**：
+ ```bash
+-# Prometheus指标
+-curl http://localhost:9090/metrics
++# 检查MCP服务器是否正常启动
++export PYTHONPATH=$PWD/src:$PYTHONPATH
++python3 -m cursor_bridge.cli mcp --config cursor_bridge_config.local.yaml
++
++# 检查Cursor配置是否正确
++cat cursor_mcp_config.json
++
++# 重启Cursor IDE
+ ```
+ 
+-主要指标：
+-- `cursor_bridge_connections_total`: 总连接数
+-- `cursor_bridge_commands_total`: 总命令执行数
+-- `cursor_bridge_command_duration_seconds`: 命令执行时间
+-- `cursor_bridge_errors_total`: 错误总数
+-- `cursor_bridge_sessions_active`: 活跃会话数
++#### 2. SSH连接失败
+ 
+-### 日志分析
++**原因**：服务器配置错误或网络问题
+ 
++**解决方案**：
+ ```bash
+-# 查看实时日志
+-tail -f /var/log/cursor-bridge.log
++# 手动测试SSH连接
++ssh -i ~/.ssh/your_key user@your-server.com
+ 
+-# 查看错误日志
+-grep ERROR /var/log/cursor-bridge.log
++# 检查SSH密钥权限
++chmod 600 ~/.ssh/your_key
+ 
+-# 查看命令执行日志
+-grep "command_executed" /var/log/cursor-bridge.log
++# 检查配置文件中的服务器信息
+ ```
+ 
+-## 故障排除
++#### 3. 企业VPN工具无法连接
+ 
+-### 常见问题
++**原因**：VPN工具配置错误
+ 
+-#### 1. 连接失败
++**解决方案**：
+ ```bash
+-# 检查网络连通性
+-ping target-server.com
++# 手动测试VPN工具
++your-vpn-tool --test
+ 
+-# 检查SSH连接
+-ssh -v user@target-server.com
++# 检查VPN工具路径
++which your-vpn-tool
+ 
+-# 检查企业VPN工具
+-enterprise-vpn-tool --test
++# 更新配置文件中的command路径
+ ```
+ 
+-#### 2. 命令执行超时
+-```yaml
+-# 调整超时配置
+-security:
+-  command_timeout: 600  # 增加到10分钟
+-```
++#### 4. 权限错误
+ 
+-#### 3. 会话丢失
++**原因**：SSH密钥或配置文件权限问题
++
++**解决方案**：
+ ```bash
+-# 检查tmux会话
+-tmux list-sessions
++# 修复SSH密钥权限
++chmod 600 ~/.ssh/your_key
++chmod 644 ~/.ssh/your_key.pub
+ 
+-# 重新创建会话
+-curl -X POST http://localhost:8082/sessions/recreate
++# 修复配置文件权限
++chmod 600 cursor_bridge_config.local.yaml
+ ```
+ 
+ ### 调试模式
+ 
+ ```bash
+-# 启用调试日志
++# 启用详细日志
+ export LOG_LEVEL=DEBUG
+-python -m cursor_bridge.server
++python3 -m cursor_bridge.cli mcp --config cursor_bridge_config.local.yaml
+ 
+-# 启用详细输出
+-python -m cursor_bridge.server --verbose
++# 查看详细错误信息
++python3 -m cursor_bridge.cli health --verbose
+ ```
+ 
+-## 贡献指南
++## 📁 项目结构
++
++```
++cursor-bridge/
++├── src/cursor_bridge/           # 核心代码
++│   ├── cli.py                  # CLI工具
++│   ├── mcp_server.py           # MCP服务器
++│   ├── config/                 # 配置管理
++│   └── utils/                  # 工具函数
++├── tests/                      # 测试代码
++├── cursor_bridge_config.yaml   # 配置模板（提交到git）
++├── cursor_bridge_config.local.yaml  # 本地配置（不提交）
++├── cursor_mcp_config.json      # Cursor MCP配置
++├── install.sh                  # 自动安装脚本
++├── start_cursor_bridge.sh      # 启动脚本
++├── requirements.txt            # 依赖列表
++├── .gitignore                  # Git忽略文件
++└── README.md                   # 项目文档
++```
++
++## 🤝 贡献指南
+ 
+ ### 提交代码
+ 
+@@ -646,73 +432,51 @@ python -m cursor_bridge.server --verbose
+ 4. 推送分支: `git push origin feature/amazing-feature`
+ 5. 创建Pull Request
+ 
+-### 代码规范
++### 开发环境
++
++```bash
++# 安装开发依赖
++pip3 install -r requirements.txt
++pip3 install pytest black isort mypy
+ 
+-- 使用Black进行代码格式化
+-- 使用isort进行导入排序
+-- 使用mypy进行类型检查
+-- 编写单元测试
+-- 更新文档
++# 运行测试
++pytest tests/
+ 
+-### 报告问题
++# 代码格式化
++black src/ tests/
++isort src/ tests/
+ 
+-请使用GitHub Issues报告问题，包含：
+-- 问题描述
+-- 复现步骤
+-- 期望行为
+-- 实际行为
+-- 环境信息
++# 类型检查
++mypy src/
++```
+ 
+-## 开发状态
++## 📈 开发状态
+ 
+ ### ✅ 已完成 (v0.1.0)
+ - [x] 基础MCP服务器框架
+ - [x] 配置管理系统
+-- [x] 日志系统
+-- [x] CLI工具
+-- [x] 健康检查和监控
++- [x] CLI工具完整实现
++- [x] Cursor IDE自动集成
+ - [x] 自动安装脚本
++- [x] 基本安全过滤
+ 
+ ### 🔄 开发中 (v0.2.0)
+-- [ ] 连接策略实现
+-- [ ] SSH连接管理
++- [ ] SSH连接管理器
+ - [ ] 企业VPN工具集成
+ - [ ] tmux会话管理
+-- [ ] 基本命令执行
++- [ ] 命令执行器优化
+ 
+ ### 📋 计划中 (v1.0)
+-- [ ] 完整MCP工具实现
+-- [ ] Cursor IDE集成
+-
+-### v1.1
+ - [ ] 多服务器支持
+-- [ ] 命令安全过滤
+-- [ ] 性能优化
+-- [ ] 监控面板
+-
+-### v1.2
++- [ ] 会话持久化
+ - [ ] 交互式命令支持
+-- [ ] 会话共享
+-- [ ] 插件系统
+-- [ ] Web界面
+-
+-### v2.0
+-- [ ] 分布式部署
+-- [ ] 高可用架构
+-- [ ] 企业级安全
+-- [ ] 多租户支持
++- [ ] Web管理界面
+ 
+-## 许可证
++## 📄 许可证
+ 
+ 本项目采用MIT许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+ 
+-## 致谢
+-
+-- [Model Context Protocol](https://github.com/modelcontextprotocol) - MCP协议支持
+-- [Cursor IDE](https://cursor.sh/) - 优秀的AI代码编辑器
+-- [tmux](https://github.com/tmux/tmux) - 终端复用器
+-
+-## 联系我们
++## 📞 联系我们
+ 
+ - 项目主页: https://github.com/maricoxu/cursor-bridge
+ - 问题反馈: https://github.com/maricoxu/cursor-bridge/issues
+diff --git a/cursor_bridge_config.yaml b/cursor_bridge_config.yaml
+index 89c11ca..a06857e 100644
+--- a/cursor_bridge_config.yaml
++++ b/cursor_bridge_config.yaml
+@@ -2,7 +2,25 @@
+ 
+ # 服务器配置
+ servers:
+-  # 企业代理连接示例
++  # 你的实际服务器配置 - 请修改以下信息
++  my-server:
++    type: direct
++    ssh:
++      host: "your-server-ip-or-domain"  # 替换为你的服务器IP或域名
++      port: 22                          # SSH端口，通常是22
++      username: "your-username"         # 替换为你的用户名
++      key_file: "~/.ssh/id_rsa"        # SSH私钥文件路径
++      # password: "your-password"       # 如果使用密码认证，取消注释并填写
++      timeout: 10
++    session:
++      name: "my-dev-session"
++      working_directory: "/home/your-username"  # 替换为你的工作目录
++      environment:
++        TERM: "xterm-256color"
++        LANG: "en_US.UTF-8"
++      shell: "/bin/bash"
++
++  # 企业代理连接示例（如果需要通过VPN或代理）
+   enterprise-dev:
+     type: proxy
+     proxy:
+diff --git a/cursor_mcp_config.json b/cursor_mcp_config.json
+index ab1d358..0993fda 100644
+--- a/cursor_mcp_config.json
++++ b/cursor_mcp_config.json
+@@ -3,15 +3,17 @@
+     "cursor-bridge": {
+       "command": "python3",
+       "args": [
+-        "-m", 
+-        "cursor_bridge.cli", 
+-        "mcp", 
+-        "--config", 
+-        "/Users/xuyehua/Code/cursor-bridge/cursor_bridge_config.yaml"
++        "-m",
++        "cursor_bridge.cli",
++        "-c",
++        "/Users/xuyehua/Code/cursor-bridge/cursor_bridge_config.local.yaml",
++        "mcp"
+       ],
+       "env": {
+         "PYTHONPATH": "/Users/xuyehua/Code/cursor-bridge/src"
+-      }
++      },
++      "disabled": false,
++      "autoApprove": true
+     }
+   }
+ }
+diff --git a/install.sh b/install.sh
+index 9ab2395..f5e29e7 100755
+--- a/install.sh
++++ b/install.sh
+@@ -88,6 +88,17 @@ setup_config() {
+     else
+         log_warning "配置文件已存在，跳过生成"
+     fi
++    
++    # 创建本地配置文件
++    if [ ! -f "cursor_bridge_config.local.yaml" ]; then
++        log_info "创建本地配置文件..."
++        cp cursor_bridge_config.yaml cursor_bridge_config.local.yaml
++        log_success "本地配置文件已创建: cursor_bridge_config.local.yaml"
++        log_warning "请编辑 cursor_bridge_config.local.yaml 文件，配置你的实际服务器信息"
++        log_info "本地配置文件不会被提交到git，保护你的敏感信息"
++    else
++        log_warning "本地配置文件已存在，跳过创建"
++    fi
+ }
+ 
+ # 运行测试
+@@ -123,8 +134,21 @@ create_start_script() {
+ # 设置Python路径
+ export PYTHONPATH=$PWD/src:$PYTHONPATH
+ 
++# 检查配置文件
++if [ -f "cursor_bridge_config.local.yaml" ]; then
++    CONFIG_FILE="cursor_bridge_config.local.yaml"
++    echo "使用本地配置文件: $CONFIG_FILE"
++elif [ -f "cursor_bridge_config.yaml" ]; then
++    CONFIG_FILE="cursor_bridge_config.yaml"
++    echo "使用默认配置文件: $CONFIG_FILE"
++else
++    echo "错误: 找不到配置文件"
++    exit 1
++fi
++
+ # 启动服务器
+-python3 -m cursor_bridge.cli start --config cursor_bridge_config.yaml
++echo "启动Cursor Bridge服务器..."
++python3 -m cursor_bridge.cli start --config "$CONFIG_FILE" "$@"
+ EOF
+ 
+     chmod +x start_cursor_bridge.sh
+@@ -137,56 +161,231 @@ create_cursor_config() {
+     
+     current_dir=$(pwd)
+     
++    # 确定使用哪个配置文件
++    if [ -f "cursor_bridge_config.local.yaml" ]; then
++        config_file="cursor_bridge_config.local.yaml"
++        log_info "使用本地配置文件: $config_file"
++    else
++        config_file="cursor_bridge_config.yaml"
++        log_info "使用默认配置文件: $config_file"
++    fi
++    
+     cat > cursor_mcp_config.json << EOF
+ {
+   "mcpServers": {
+     "cursor-bridge": {
+       "command": "python3",
+       "args": [
+-        "-m", 
+-        "cursor_bridge.cli", 
+-        "mcp", 
+-        "--config", 
+-        "${current_dir}/cursor_bridge_config.yaml"
++        "-m",
++        "cursor_bridge.cli",
++        "-c",
++        "${current_dir}/${config_file}",
++        "mcp"
+       ],
+       "env": {
+         "PYTHONPATH": "${current_dir}/src"
+-      }
++      },
++      "disabled": false,
++      "autoApprove": true
+     }
+   }
+ }
+ EOF
+ 
+     log_success "Cursor MCP配置已生成: cursor_mcp_config.json"
++    log_info "配置文件路径: ${current_dir}/${config_file}"
++}
++
++# 自动配置Cursor MCP
++auto_configure_cursor() {
++    log_info "自动配置Cursor MCP..."
++    
++    cursor_config_file="$HOME/.cursor/mcp.json"
++    current_dir=$(pwd)
++    
++    # 确定使用哪个配置文件
++    if [ -f "cursor_bridge_config.local.yaml" ]; then
++        config_file="cursor_bridge_config.local.yaml"
++        log_info "使用本地配置文件: $config_file"
++    else
++        config_file="cursor_bridge_config.yaml"
++        log_info "使用默认配置文件: $config_file"
++    fi
++    
++    # 检查Cursor配置目录是否存在
++    if [ ! -d "$HOME/.cursor" ]; then
++        log_warning "Cursor配置目录不存在，创建目录: $HOME/.cursor"
++        mkdir -p "$HOME/.cursor"
++    fi
++    
++    # 检查是否已安装jq（用于JSON处理）
++    if ! command -v jq &> /dev/null; then
++        log_warning "jq未安装，使用Python进行JSON处理"
++        
++        # 使用Python脚本处理JSON配置
++        python3 << EOF
++import json
++import os
++
++config_file_path = "$cursor_config_file"
++current_dir = "$current_dir"
++config_file = "$config_file"
++
++# cursor-bridge配置
++cursor_bridge_config = {
++    "command": "python3",
++    "args": [
++        "-m",
++        "cursor_bridge.cli",
++        "-c",
++        f"{current_dir}/{config_file}",
++        "mcp"
++    ],
++    "env": {
++        "PYTHONPATH": f"{current_dir}/src"
++    },
++    "disabled": False,
++    "autoApprove": True
++}
++
++# 读取现有配置或创建新配置
++if os.path.exists(config_file_path):
++    try:
++        with open(config_file_path, 'r') as f:
++            config = json.load(f)
++    except (json.JSONDecodeError, FileNotFoundError):
++        config = {"mcpServers": {}}
++else:
++    config = {"mcpServers": {}}
++
++# 确保mcpServers存在
++if "mcpServers" not in config:
++    config["mcpServers"] = {}
++
++# 检查cursor-bridge是否已存在
++if "cursor-bridge" in config["mcpServers"]:
++    print("cursor-bridge配置已存在，更新配置...")
++else:
++    print("添加cursor-bridge配置...")
++
++# 添加或更新cursor-bridge配置
++config["mcpServers"]["cursor-bridge"] = cursor_bridge_config
++
++# 保存配置
++with open(config_file_path, 'w') as f:
++    json.dump(config, f, indent=2)
++
++print(f"配置已保存到: {config_file_path}")
++print(f"使用配置文件: {current_dir}/{config_file}")
++EOF
++        
++        if [ $? -eq 0 ]; then
++            log_success "Cursor MCP配置已自动添加到: $cursor_config_file"
++        else
++            log_error "自动配置失败，请手动复制cursor_mcp_config.json的内容到Cursor设置中"
++            return 1
++        fi
++    else
++        # 使用jq处理JSON
++        if [ -f "$cursor_config_file" ]; then
++            # 备份现有配置
++            cp "$cursor_config_file" "$cursor_config_file.backup"
++            log_info "已备份现有配置到: $cursor_config_file.backup"
++            
++            # 更新配置
++            jq --arg current_dir "$current_dir" --arg config_file "$config_file" '
++                .mcpServers["cursor-bridge"] = {
++                    "command": "python3",
++                    "args": [
++                        "-m",
++                        "cursor_bridge.cli",
++                        "-c",
++                        ($current_dir + "/" + $config_file),
++                        "mcp"
++                    ],
++                    "env": {
++                        "PYTHONPATH": ($current_dir + "/src")
++                    },
++                    "disabled": false,
++                    "autoApprove": true
++                }
++            ' "$cursor_config_file" > "$cursor_config_file.tmp" && mv "$cursor_config_file.tmp" "$cursor_config_file"
++        else
++            # 创建新配置文件
++            jq -n --arg current_dir "$current_dir" --arg config_file "$config_file" '{
++                "mcpServers": {
++                    "cursor-bridge": {
++                        "command": "python3",
++                        "args": [
++                            "-m",
++                            "cursor_bridge.cli",
++                            "-c",
++                            ($current_dir + "/" + $config_file),
++                            "mcp"
++                        ],
++                        "env": {
++                            "PYTHONPATH": ($current_dir + "/src")
++                        },
++                        "disabled": false,
++                        "autoApprove": true
++                    }
++                }
++            }' > "$cursor_config_file"
++        fi
++        
++        log_success "Cursor MCP配置已自动添加到: $cursor_config_file"
++    fi
++    
++    log_info "请重启Cursor IDE以使配置生效"
+ }
+ 
+ # 显示使用说明
+ show_usage() {
+     log_success "🎉 Cursor Bridge 安装完成！"
+     echo ""
+-    echo "📋 使用说明:"
+-    echo "  1. 编辑配置文件: cursor_bridge_config.yaml"
+-    echo "  2. 启动服务器: ./start_cursor_bridge.sh"
+-    echo "  3. 或手动启动: PYTHONPATH=\$PWD/src python3 -m cursor_bridge.cli start"
++    echo "📋 配置步骤:"
++    echo "  1. 📝 编辑本地配置文件: cursor_bridge_config.local.yaml"
++    echo "     - 配置你的服务器连接信息（IP、用户名、SSH密钥等）"
++    echo "     - 本地配置文件不会被提交到git，保护敏感信息"
++    echo "  2. 🚀 启动服务器: ./start_cursor_bridge.sh"
++    echo "  3. 🔄 重启Cursor IDE以使MCP配置生效"
+     echo ""
+     echo "🔗 Cursor IDE 集成:"
+-    echo "  1. 打开 Cursor IDE 设置"
+-    echo "  2. 找到 'MCP Servers' 配置"
+-    echo "  3. 复制 cursor_mcp_config.json 的内容到配置中"
+-    echo "  4. 重启 Cursor IDE"
+-    echo "  5. 在 Cursor 中就可以使用 cursor-bridge 工具了！"
++    echo "  ✅ MCP配置已自动添加到Cursor"
++    echo "  🔄 请重启Cursor IDE以使配置生效"
++    echo "  🎯 重启后即可在Cursor中使用cursor-bridge工具！"
++    echo ""
++    echo "🛠️ 可用的MCP工具:"
++    echo "  - execute_command: 在远程服务器执行命令"
++    echo "  - list_sessions: 列出活跃会话"
++    echo "  - create_session: 创建新会话"
++    echo "  - destroy_session: 销毁会话"
++    echo "  - get_session_status: 获取会话状态"
+     echo ""
+     echo "🔧 配置说明:"
+-    echo "  - 配置文件包含服务器连接信息"
++    echo "  - 📁 配置模板: cursor_bridge_config.yaml（提交到git）"
++    echo "  - 🔒 本地配置: cursor_bridge_config.local.yaml（不提交到git）"
+     echo "  - 支持直接SSH连接和企业代理连接"
+     echo "  - 详细配置请参考 README.md"
+     echo ""
+-    echo "🧪 测试MCP服务器:"
++    echo "🎯 在Cursor中使用:"
++    echo "  配置完成后，你可以直接告诉Cursor AI："
++    echo "  - \"请在远程服务器上查看当前目录的文件\""
++    echo "  - \"帮我在服务器上运行 git status\""
++    echo "  - \"在远程服务器上安装 npm 依赖\""
++    echo ""
++    echo "🧪 测试命令:"
+     echo "  - 测试MCP: PYTHONPATH=\$PWD/src python3 -m cursor_bridge.cli mcp"
++    echo "  - 测试连接: PYTHONPATH=\$PWD/src python3 -m cursor_bridge.cli ping"
+     echo ""
+     echo "📚 更多帮助:"
+     echo "  - 查看帮助: PYTHONPATH=\$PWD/src python3 -m cursor_bridge.cli --help"
+     echo "  - 项目文档: https://github.com/maricoxu/cursor-bridge"
++    echo ""
++    echo "⚠️  重要提醒:"
++    echo "  - 请编辑 cursor_bridge_config.local.yaml 配置你的服务器信息"
++    echo "  - 本地配置文件已添加到.gitignore，不会被提交到git"
++    echo "  - 如果自动配置失败，请手动复制cursor_mcp_config.json的内容到Cursor设置中"
+ }
+ 
+ # 主安装流程
+@@ -213,6 +412,9 @@ main() {
+     # 生成Cursor配置
+     create_cursor_config
+     
++    # 自动配置Cursor MCP
++    auto_configure_cursor
++    
+     # 显示使用说明
+     show_usage
+ }
+diff --git a/src/cursor_bridge/mcp_server.py b/src/cursor_bridge/mcp_server.py
+index c094a6e..9e56b51 100644
+--- a/src/cursor_bridge/mcp_server.py
++++ b/src/cursor_bridge/mcp_server.py
+@@ -226,7 +226,11 @@ class SimpleMCPHandler:
+         request_id = request.get("id")
+         
+         try:
+-            if method == "tools/list":
++            if method == "initialize":
++                return await self._handle_initialize(request_id, params)
++            elif method == "initialized":
++                return await self._handle_initialized(request_id)
++            elif method == "tools/list":
+                 return await self._handle_tools_list(request_id)
+             elif method == "tools/call":
+                 return await self._handle_tools_call(request_id, params)
+@@ -241,6 +245,29 @@ class SimpleMCPHandler:
+             self.logger.error("处理请求失败", method=method, error=str(e))
+             return self._error_response(request_id, -32603, f"Internal error: {str(e)}")
+     
++    async def _handle_initialize(self, request_id: Any, params: Dict[str, Any]) -> Dict[str, Any]:
++        """处理初始化请求"""
++        return {
++            "jsonrpc": "2.0",
++            "id": request_id,
++            "result": {
++                "protocolVersion": "2024-11-05",
++                "capabilities": {
++                    "tools": {},
++                    "resources": {}
++                },
++                "serverInfo": {
++                    "name": "cursor-bridge",
++                    "version": "0.1.0"
++                }
++            }
++        }
++    
++    async def _handle_initialized(self, request_id: Any) -> Dict[str, Any]:
++        """处理初始化完成通知"""
++        # 这是一个通知，不需要返回响应
++        return None
++    
+     async def _handle_tools_list(self, request_id: Any) -> Dict[str, Any]:
+         """处理工具列表请求"""
+         tools = [
+@@ -529,18 +556,33 @@ async def run_stdio_server(config_path: Optional[str] = None):
+     mcp_server = MCPServer(config_path)
+     handler = SimpleMCPHandler(mcp_server)
+     
++    # 创建异步stdin/stdout
++    loop = asyncio.get_event_loop()
++    reader = asyncio.StreamReader()
++    protocol = asyncio.StreamReaderProtocol(reader)
++    await loop.connect_read_pipe(lambda: protocol, sys.stdin)
++    
++    writer_transport, writer_protocol = await loop.connect_write_pipe(
++        asyncio.streams.FlowControlMixin, sys.stdout
++    )
++    writer = asyncio.StreamWriter(writer_transport, writer_protocol, reader, loop)
++    
++    logger.info("MCP服务器已启动，等待请求...")
++    
+     # 处理stdio通信
+-    while True:
+-        try:
+-            # 从stdin读取请求
+-            line = await asyncio.get_event_loop().run_in_executor(None, sys.stdin.readline)
++    try:
++        while True:
++            # 从stdin读取一行
++            line = await reader.readline()
+             if not line:
+                 break
+                 
+-            line = line.strip()
++            line = line.decode('utf-8').strip()
+             if not line:
+                 continue
+             
++            logger.debug("收到请求", line=line)
++            
+             # 解析JSON请求
+             try:
+                 request = json.loads(line)
+@@ -551,13 +593,17 @@ async def run_stdio_server(config_path: Optional[str] = None):
+             # 处理请求
+             response = await handler.handle_request(request)
+             
+-            # 发送响应到stdout
+-            response_line = json.dumps(response, ensure_ascii=False)
+-            print(response_line, flush=True)
++            # 发送响应到stdout（如果有响应的话）
++            if response is not None:
++                response_line = json.dumps(response, ensure_ascii=False) + '\n'
++                writer.write(response_line.encode('utf-8'))
++                await writer.drain()
++                logger.debug("发送响应", response=response_line.strip())
+             
+-        except Exception as e:
+-            logger.error("处理请求时发生错误", error=str(e))
+-            break
++    except Exception as e:
++        logger.error("处理请求时发生错误", error=str(e))
++    finally:
++        writer.close()
+     
+     logger.info("MCP服务器关闭")
+ 
+diff --git a/start_cursor_bridge.sh b/start_cursor_bridge.sh
+index cdd231a..711fdd6 100755
+--- a/start_cursor_bridge.sh
++++ b/start_cursor_bridge.sh
+@@ -5,5 +5,18 @@
+ # 设置Python路径
+ export PYTHONPATH=$PWD/src:$PYTHONPATH
+ 
++# 检查配置文件
++if [ -f "cursor_bridge_config.local.yaml" ]; then
++    CONFIG_FILE="cursor_bridge_config.local.yaml"
++    echo "使用本地配置文件: $CONFIG_FILE"
++elif [ -f "cursor_bridge_config.yaml" ]; then
++    CONFIG_FILE="cursor_bridge_config.yaml"
++    echo "使用默认配置文件: $CONFIG_FILE"
++else
++    echo "错误: 找不到配置文件"
++    exit 1
++fi
++
+ # 启动服务器
+-python3 -m cursor_bridge.cli start --config cursor_bridge_config.yaml
++echo "启动Cursor Bridge服务器..."
++python3 -m cursor_bridge.cli start --config "$CONFIG_FILE" "$@"
+diff --git a/test_mcp.py b/test_mcp.py
+new file mode 100644
+index 0000000..0d8a378
+--- /dev/null
++++ b/test_mcp.py
+@@ -0,0 +1,109 @@
++#!/usr/bin/env python3
++
++import sys
++import subprocess
++import json
++import time
++import os
++
++# 设置环境
++os.environ['PYTHONPATH'] = f"{os.getcwd()}/src"
++
++def test_mcp_server():
++    """测试MCP服务器"""
++    print("🧪 测试MCP服务器...")
++    
++    # 启动MCP服务器
++    proc = subprocess.Popen(
++        [sys.executable, '-m', 'cursor_bridge.cli', 'mcp'], 
++        stdin=subprocess.PIPE, 
++        stdout=subprocess.PIPE, 
++        stderr=subprocess.PIPE,
++        text=True
++    )
++    
++    try:
++        # 测试初始化
++        print("📡 发送initialize请求...")
++        init_request = {
++            "jsonrpc": "2.0",
++            "id": 1,
++            "method": "initialize",
++            "params": {
++                "protocolVersion": "2024-11-05",
++                "capabilities": {},
++                "clientInfo": {"name": "test", "version": "1.0"}
++            }
++        }
++        
++        proc.stdin.write(json.dumps(init_request) + '\n')
++        proc.stdin.flush()
++        
++        # 等待一下让服务器处理
++        time.sleep(1)
++        
++        # 读取响应
++        response_line = proc.stdout.readline()
++        if response_line:
++            response = json.loads(response_line.strip())
++            print("✅ 初始化响应:", json.dumps(response, indent=2))
++        else:
++            print("❌ 无初始化响应")
++            # 检查错误输出
++            stderr_output = proc.stderr.read()
++            if stderr_output:
++                print("错误输出:", stderr_output)
++            # 检查进程是否还在运行
++            if proc.poll() is not None:
++                print(f"进程已退出，退出码: {proc.returncode}")
++            return False
++        
++        # 发送initialized通知
++        print("📡 发送initialized通知...")
++        initialized_request = {
++            "jsonrpc": "2.0",
++            "method": "initialized",
++            "params": {}
++        }
++        
++        proc.stdin.write(json.dumps(initialized_request) + '\n')
++        proc.stdin.flush()
++        
++        # 测试工具列表
++        print("📡 发送tools/list请求...")
++        tools_request = {
++            "jsonrpc": "2.0",
++            "id": 2,
++            "method": "tools/list",
++            "params": {}
++        }
++        
++        proc.stdin.write(json.dumps(tools_request) + '\n')
++        proc.stdin.flush()
++        
++        # 读取工具列表响应
++        response_line = proc.stdout.readline()
++        if response_line:
++            response = json.loads(response_line.strip())
++            tools = response.get('result', {}).get('tools', [])
++            print(f"✅ 工具列表响应: 找到 {len(tools)} 个工具")
++            for tool in tools:
++                print(f"   - {tool['name']}: {tool['description']}")
++        else:
++            print("❌ 无工具列表响应")
++            return False
++        
++        print("🎉 MCP服务器测试通过！")
++        return True
++        
++    except Exception as e:
++        print(f"❌ 测试失败: {e}")
++        return False
++    finally:
++        # 终止进程
++        proc.terminate()
++        proc.wait()
++
++if __name__ == "__main__":
++    success = test_mcp_server()
++    sys.exit(0 if success else 1) 
+\ No newline at end of file
+-- 
+2.39.5 (Apple Git-154)
+

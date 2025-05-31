@@ -1,0 +1,90 @@
+# Cursor Bridge 本地tmux配置
+# 用户手动管理连接，cursor-bridge只连接本地tmux会话
+
+# 服务器配置
+servers:
+  # 本地tmux会话 - 主要工作环境
+  local-tmux:
+    type: local_tmux
+    tmux:
+      session_name: "dev"        # 你的主要开发会话名
+      window_name: "main"
+    session:
+      name: "local-dev-session"
+      working_directory: "/Users/xuyehua"
+      environment:
+        TERM: "xterm-256color"
+        LANG: "en_US.UTF-8"
+      shell: "/bin/zsh"
+
+  # 百度服务器tmux会话（如果你在tmux中有连接到百度服务器的窗口）
+  baidu-tmux:
+    type: local_tmux
+    tmux:
+      session_name: "baidu"      # 专门用于百度服务器的tmux会话
+      window_name: "server"
+    session:
+      name: "baidu-dev-session"
+      working_directory: "/Users/xuyehua"
+      environment:
+        TERM: "xterm-256color"
+        LANG: "en_US.UTF-8"
+      shell: "/bin/zsh"
+
+# MCP服务器配置
+mcp:
+  server:
+    host: "localhost"
+    port: 8080
+    log_level: "INFO"
+    max_connections: 100
+    
+  features:
+    command_history: true
+    session_persistence: true
+    auto_reconnect: true
+    health_check_interval: 30
+    command_timeout: 300
+    prompts: false
+    
+  tools:
+    - "execute_command"
+    - "list_sessions"
+    - "create_session"
+    - "get_session_status"
+
+# 安全配置
+security:
+  allowed_commands:
+    - "ls"
+    - "pwd"
+    - "cd"
+    - "cat"
+    - "grep"
+    - "find"
+    - "git"
+    - "python"
+    - "python3"
+    - "node"
+    - "npm"
+    - "pip"
+    - "make"
+    - "docker"
+    - "kubectl"
+    - "tmux"
+  
+  blocked_commands:
+    - "rm -rf /"
+    - "sudo rm"
+    - "mkfs"
+  
+  command_timeout: 300
+  max_output_size: 10485760
+  max_concurrent_commands: 10
+
+# 监控配置
+monitoring:
+  logging:
+    level: "INFO"
+    format: "json"
+    console: true

@@ -219,4 +219,302 @@ monitoring:
   
   # 性能监控
   enable_metrics: true
-  metrics_interval: 30 
+  metrics_interval: 30
+
+# 常用命令和目录配置
+user_shortcuts:
+  # 常用目录
+  directories:
+    home: "/home"
+    code: "/home/Code"
+    projects: "/home/Code"
+    logs: "/var/log"
+    config: "/etc"
+    workspace: "/workspace"
+    models: "/workspace/models"
+    data: "/workspace/data"
+    scripts: "/home/scripts"
+    
+  # 常用命令
+  commands:
+    # 系统监控
+    system_status:
+      description: "检查系统状态"
+      command: "df -h && free -h && ps aux | head -10"
+      
+    gpu_status:
+      description: "检查GPU状态"
+      command: "nvidia-smi"
+      
+    memory_usage:
+      description: "查看内存使用情况"
+      command: "free -h && ps aux --sort=-%mem | head -10"
+      
+    disk_usage:
+      description: "查看磁盘使用情况"
+      command: "df -h && du -sh /home/* 2>/dev/null | sort -hr | head -10"
+      
+    # 开发相关
+    python_env:
+      description: "检查Python环境"
+      command: "python --version && which python && pip list | head -10"
+      
+    git_status:
+      description: "检查git状态"
+      command: "git status && git log --oneline -5"
+      
+    docker_status:
+      description: "检查Docker状态"
+      command: "docker ps && docker images | head -5"
+      
+    # 日志查看
+    recent_logs:
+      description: "查看最近的系统日志"
+      command: "tail -50 /var/log/syslog 2>/dev/null || journalctl -n 50"
+      
+    error_logs:
+      description: "查找错误日志"
+      command: "grep -i error /var/log/* 2>/dev/null | tail -10"
+      
+    # 网络相关
+    network_status:
+      description: "检查网络状态"
+      command: "ip addr show && netstat -tuln | head -10"
+      
+    # 进程管理
+    top_processes:
+      description: "查看占用资源最多的进程"
+      command: "ps aux --sort=-%cpu | head -10"
+      
+  # 快捷操作组合
+  workflows:
+    full_system_check:
+      description: "完整的系统检查"
+      commands:
+        - "system_status"
+        - "gpu_status"
+        - "disk_usage"
+        - "top_processes"
+        
+    dev_environment_check:
+      description: "开发环境检查"
+      commands:
+        - "python_env"
+        - "git_status"
+        - "docker_status"
+        
+    troubleshooting:
+      description: "故障排查"
+      commands:
+        - "recent_logs"
+        - "error_logs"
+        - "memory_usage"
+        - "network_status"
+
+# 智能命令建议
+command_suggestions:
+  # 基于关键词的命令建议
+  keywords:
+    "检查": ["system_status", "gpu_status", "python_env"]
+    "查看": ["disk_usage", "memory_usage", "recent_logs"]
+    "监控": ["top_processes", "network_status", "gpu_status"]
+    "状态": ["system_status", "git_status", "docker_status"]
+    "日志": ["recent_logs", "error_logs"]
+    "GPU": ["gpu_status"]
+    "内存": ["memory_usage"]
+    "磁盘": ["disk_usage"]
+    "网络": ["network_status"]
+    "Python": ["python_env"]
+    "Git": ["git_status"]
+    "Docker": ["docker_status"]
+
+# 智能项目管理系统
+project_management:
+  # 当前活跃项目
+  current_project: "xmlir"
+  
+  # 项目列表
+  projects:
+    # XMLIR项目
+    xmlir:
+      name: "XMLIR"
+      description: "百度XPU XMLIR编译器项目"
+      path: "/home/Code/baidu/xpu/XMLIR"
+      keywords: ["xmlir", "XMLIR", "编译器", "compiler", "xpu"]
+      
+      # 项目特定命令
+      commands:
+        build:
+          description: "编译XMLIR项目"
+          command: "cd /home/Code/baidu/xpu/XMLIR && bash script/build/cmake_build.sh -p"
+          
+        clean_build:
+          description: "清理并重新编译"
+          command: "cd /home/Code/baidu/xpu/XMLIR && rm -rf build && bash script/build/cmake_build.sh -p"
+          
+        test:
+          description: "运行测试"
+          command: "cd /home/Code/baidu/xpu/XMLIR && bash script/test/run_tests.sh"
+          
+        status:
+          description: "检查项目状态"
+          command: "cd /home/Code/baidu/xpu/XMLIR && git status && ls -la"
+          
+        setup:
+          description: "设置开发环境"
+          command: "cd /home/Code/baidu/xpu/XMLIR && source setup_env.sh"
+      
+      # 项目环境变量
+      environment:
+        PROJECT_ROOT: "/home/Code/baidu/xpu/XMLIR"
+        BUILD_TYPE: "Release"
+        CMAKE_BUILD_PARALLEL_LEVEL: "8"
+    
+    # Hydra项目
+    hydra:
+      name: "Hydra"
+      description: "百度XPU Hydra项目"
+      path: "/home/Code/baidu/xpu/Hydra"
+      keywords: ["hydra", "Hydra", "xpu"]
+      
+      commands:
+        build:
+          description: "编译Hydra项目"
+          command: "cd /home/Code/baidu/xpu/Hydra && make build"
+          
+        status:
+          description: "检查项目状态"
+          command: "cd /home/Code/baidu/xpu/Hydra && git status"
+      
+      environment:
+        PROJECT_ROOT: "/home/Code/baidu/xpu/Hydra"
+    
+    # xBLAS项目
+    xblas:
+      name: "xBLAS"
+      description: "百度XPU xBLAS项目"
+      path: "/home/Code/baidu/xpu/xBLAS"
+      keywords: ["xblas", "xBLAS", "BLAS", "线性代数"]
+      
+      commands:
+        build:
+          description: "编译xBLAS项目"
+          command: "cd /home/Code/baidu/xpu/xBLAS && make"
+          
+        status:
+          description: "检查项目状态"
+          command: "cd /home/Code/baidu/xpu/xBLAS && git status"
+      
+      environment:
+        PROJECT_ROOT: "/home/Code/baidu/xpu/xBLAS"
+    
+    # PyTorch项目
+    pytorch:
+      name: "PyTorch"
+      description: "PyTorch深度学习框架"
+      path: "/home/Code/pytorch"
+      keywords: ["pytorch", "PyTorch", "深度学习", "机器学习", "AI"]
+      
+      commands:
+        build:
+          description: "编译PyTorch"
+          command: "cd /home/Code/pytorch && python setup.py build"
+          
+        install:
+          description: "安装PyTorch"
+          command: "cd /home/Code/pytorch && python setup.py install"
+          
+        test:
+          description: "运行PyTorch测试"
+          command: "cd /home/Code/pytorch && python -m pytest test/"
+          
+        status:
+          description: "检查项目状态"
+          command: "cd /home/Code/pytorch && git status"
+      
+      environment:
+        PROJECT_ROOT: "/home/Code/pytorch"
+        USE_CUDA: "1"
+        USE_CUDNN: "1"
+    
+    # Megatron-LM项目
+    megatron:
+      name: "Megatron-LM"
+      description: "大规模语言模型训练框架"
+      path: "/home/Code/Megatron-LM"
+      keywords: ["megatron", "Megatron", "LLM", "大模型", "训练"]
+      
+      commands:
+        train:
+          description: "开始训练"
+          command: "cd /home/Code/Megatron-LM && bash examples/gpt3/train_gpt3.sh"
+          
+        status:
+          description: "检查项目状态"
+          command: "cd /home/Code/Megatron-LM && git status"
+      
+      environment:
+        PROJECT_ROOT: "/home/Code/Megatron-LM"
+    
+    # Flux项目
+    flux:
+      name: "Flux"
+      description: "Flux项目"
+      path: "/home/Code/flux"
+      keywords: ["flux", "Flux"]
+      
+      commands:
+        build:
+          description: "编译Flux项目"
+          command: "cd /home/Code/flux && make"
+          
+        status:
+          description: "检查项目状态"
+          command: "cd /home/Code/flux && git status"
+      
+      environment:
+        PROJECT_ROOT: "/home/Code/flux"
+
+  # 项目智能识别规则
+  project_detection:
+    # 基于关键词的项目识别
+    keyword_matching:
+      enabled: true
+      confidence_threshold: 0.7
+      
+    # 基于上下文的项目识别
+    context_matching:
+      enabled: true
+      # 记住最近讨论的项目
+      recent_projects_memory: 5
+      
+    # 基于目录路径的项目识别
+    path_matching:
+      enabled: true
+      
+  # 项目切换行为
+  project_switching:
+    # 自动切换到项目目录
+    auto_change_directory: true
+    
+    # 自动设置项目环境变量
+    auto_set_environment: true
+    
+    # 显示项目切换确认
+    show_switch_confirmation: true
+    
+    # 项目切换时执行的命令
+    on_switch_commands:
+      - "pwd"
+      - "ls -la"
+
+  # 项目状态管理
+  project_state:
+    # 记录项目工作状态
+    track_working_state: true
+    
+    # 项目状态文件路径
+    state_file: "/tmp/cursor_bridge_project_state.json"
+    
+    # 自动保存状态间隔（秒）
+    auto_save_interval: 300 
