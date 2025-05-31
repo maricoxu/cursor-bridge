@@ -5,9 +5,9 @@
 servers:
   # 本地tmux会话 - 主要工作环境
   local-tmux:
-    type: local_tmux
+    type: "local_tmux"
     tmux:
-      session_name: "dev"        # 你的主要开发会话名
+      session_name: "dev"
       window_name: "main"
     session:
       name: "local-dev-session"
@@ -17,11 +17,11 @@ servers:
         LANG: "en_US.UTF-8"
       shell: "/bin/zsh"
 
-  # 百度服务器tmux会话（如果你在tmux中有连接到百度服务器的窗口）
+  # 百度服务器tmux会话
   baidu-tmux:
-    type: local_tmux
+    type: "local_tmux"
     tmux:
-      session_name: "baidu"      # 专门用于百度服务器的tmux会话
+      session_name: "baidu"
       window_name: "server"
     session:
       name: "baidu-dev-session"
@@ -30,6 +30,9 @@ servers:
         TERM: "xterm-256color"
         LANG: "en_US.UTF-8"
       shell: "/bin/zsh"
+
+# 默认服务器
+default_server: "baidu-tmux"
 
 # MCP服务器配置
 mcp:
@@ -52,6 +55,8 @@ mcp:
     - "list_sessions"
     - "create_session"
     - "get_session_status"
+    
+  resources: []
 
 # 安全配置
 security:
@@ -77,14 +82,28 @@ security:
     - "rm -rf /"
     - "sudo rm"
     - "mkfs"
+    
+  blocked_patterns: []
   
   command_timeout: 300
   max_output_size: 10485760
   max_concurrent_commands: 10
+  
+  allowed_paths: []
+  blocked_paths: []
 
 # 监控配置
 monitoring:
+  metrics: {}
+  health_check: {}
   logging:
     level: "INFO"
     format: "json"
     console: true
+
+# 性能配置
+performance:
+  connection_pool: {}
+  session_pool: {}
+  command_execution: {}
+  caching: {}
